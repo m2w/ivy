@@ -46,7 +46,6 @@ defmodule Ivy.Core do
   @version Keyword.get(Mix.Project.config(), :version)
   # TODO
   # "watch" functionality
-  # "new" functionality
   # error handling
   # pagination
 
@@ -60,23 +59,29 @@ defmodule Ivy.Core do
 
   @doc "Entry point for the escript."
   def main(args) do
-    ConfigAgent.start_link()
-    SiteStore.start_link()
-    TemplateStore.start_link()
-
-    configure()
-
     if length(args) > 0 do
       {parsed, _argv, _errs} = OptionParser.parse(args,
                                                   switches: [port: :integer,
-                                                             serve: :boolean],
+                                                             serve: :boolean,
+                                                             new: :string],
                                                   aliases: [p: :port, v: :version,
-                                                            w: :watch, s: :serve])
+                                                            w: :watch, s: :serve,
+                                                            n: :new])
       # TODO: refactor?
       serve = Keyword.get(parsed, :serve, false)
       port = Keyword.get(parsed, :port, 4000)
       watch = Keyword.get(parsed, :watch, false)
       version = Keyword.get(parsed, :version, false)
+      new = String.strip(Keyword.get(parsed, :new, ""))
+
+      if String.length(new) > 0 do
+        Ivy.Skel.create(new)
+      else
+        IO.puts "Please provide a path for the ivy skeleton."
+        exit({:shutdown, 126})
+      end
+      setup()
+
       if serve do
         run_server(port)
       else
@@ -92,8 +97,17 @@ defmodule Ivy.Core do
         end
       end
     else
+      setup()
       build()
     end
+  end
+
+  @doc "Starts all Stores and configures ivy."
+  def setup() do
+    ConfigAgent.start_link()
+    SiteStore.start_link()
+    TemplateStore.start_link()
+    configure()
   end
 
   @doc "Print a help text."
@@ -103,6 +117,7 @@ ivy #{@version} -- ivy is a static site generator written in Elixir
 
 Usage:
   ivy [-s | --serve] [-v | --version] [-w | --watch] [-p | --port <port>]
+      [-n | --new <path>]
 
 Description:
 TODO
@@ -111,6 +126,8 @@ When run without options, ivy will simply build your site.
 Options:
   -h, --help
     Display this help text
+  -n, --new
+    Generate a skeleton ivy
   -s, --serve
     Locally serve your site
   -v, --version
@@ -130,8 +147,11 @@ Options:
   def configure() do
     cwd = File.cwd!
     config_file = Path.absname("ivy_conf.exs", cwd)
-    [{:ivy, config}] = Mix.Config.read!(config_file)
-    ConfigAgent.set_config(config)
+    if File.exists?(config_file) do
+      [{:ivy, config}] = Mix.Config.read!(config_file)
+      ConfigAgent.set_config(config)
+    end
+
     ConfigAgent.prepend_path([:out, :posts, :templates, :includes, :static], cwd)
   end
 
@@ -457,5 +477,60 @@ defmodule LocalServer do
     else
       Plug.Conn.send_resp(conn, 404, "not found")
     end
+  end
+end
+
+defmodule Ivy.Skel do
+  @gitignore """
+_out/
+"""
+  @ivy_conf """
+use Mix.Config
+
+# Add/modify ivy behaviour below:
+config :ivy,
+  # directory structure, paths *must be* relative to the root dir
+  posts: "_posts",
+  out: "_out",
+  templates: "_templates",
+  includes: "_includes",
+  pages: "_pages",
+  static: "static"
+"""
+
+  @readme """
+# Welcome to ivy!
+
+ivy is a static site generator. To get started, simply run `ivy -s`
+and then visit [localhost:4000](http://localhost:4000).
+"""
+
+  def create(name) do
+    cwd = File.cwd!
+    if Path.type(name) == :relative do
+      p = Path.expand(Path.join(cwd, name))
+    else
+      p = name
+    end
+    if File.exists?(name) do
+      IO.puts "#{name} already exists, aborting."
+      exit({:shutdown, 126})
+    end
+    # create the root dir
+    File.mkdir!(name)
+    # write README
+    File.write!(Path.join(p, "README"), @readme)
+    # write .gitignore
+    File.write!(Path.join(p, ".gitignore"), @gitignore)
+    # write ivy_conf.exs
+    File.write!(Path.join(p, "ivy_conf.exs"), @ivy_conf)
+    # create the default directory structure
+    Enum.map(["_out", "_posts", "_templates", "_includes", "_pages", "static"],
+             &(File.mkdir!(Path.join(name, &1))))
+
+    # TODO: add default styling and a landing page
+
+    IO.puts "Your ivy has been planted!"
+    exit({:shutdown, 0})
   end
 end
