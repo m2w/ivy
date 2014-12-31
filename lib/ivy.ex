@@ -46,6 +46,10 @@ defmodule Ivy.Core do
   @version Keyword.get(Mix.Project.config(), :version)
   # TODO
   # "watch" functionality
+  # meta data extraction for posts: dates
+  # site-wide meta-data
+  # "plugin" framework
+  # tests
   # error handling
   # pagination
 
