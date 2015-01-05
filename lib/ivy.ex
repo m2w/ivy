@@ -46,8 +46,6 @@ defmodule Ivy.Core do
   @version Keyword.get(Mix.Project.config(), :version)
   # TODO
   # "watch" functionality
-  # meta data extraction for posts: dates
-  # site-wide meta-data
   # "plugin" framework
   # tests
   # error handling
@@ -71,19 +69,23 @@ defmodule Ivy.Core do
                                                   aliases: [p: :port, v: :version,
                                                             w: :watch, s: :serve,
                                                             n: :new])
+
       # TODO: refactor?
       serve = Keyword.get(parsed, :serve, false)
       port = Keyword.get(parsed, :port, 4000)
       watch = Keyword.get(parsed, :watch, false)
       version = Keyword.get(parsed, :version, false)
-      new = String.strip(Keyword.get(parsed, :new, ""))
 
-      if String.length(new) > 0 do
-        Ivy.Skel.create(new)
-      else
-        IO.puts "Please provide a path for the ivy skeleton."
-        exit({:shutdown, 126})
+      if Keyword.has_key?(parsed, :new) do
+        new = String.strip(Keyword.get(parsed, :new, ""))
+        if String.length(new) > 0 do
+          Ivy.Skel.create(new)
+        else
+          IO.puts "Please provide a path for the ivy skeleton."
+          System.halt(126)
+        end
       end
+
       setup()
 
       if serve do
@@ -171,11 +173,12 @@ Options:
     out_dir = ConfigAgent.get(:out)
     if !(File.dir?(out_dir)) do
       IO.puts "Ivy needs #{out_dir} to exist and be a directory"
-      exit({:shutdown, 126})
+      System.halt(126)
     end
 
     # grab posts
     md_posts = Mix.Utils.extract_files([ConfigAgent.get(:posts)], "*.md")
+    md_posts = Enum.filter(md_posts, &String.match?(&1, ~r/\d{4}-\d{1,2}-\d{1,2}-.+/))
 
     # grab pages
     md_pages = Mix.Utils.extract_files([ConfigAgent.get(:pages)], "*.md")
@@ -233,23 +236,27 @@ Options:
 
   @doc "Renders an index.html"
   def build_index() do
-    posts = SiteStore.get_all_content()
-
-    # TODO: refactor and clean up and finish implementation
-    # get index.html
-    meta = [] # parse from index
-    t = TemplateStore.get("base") # parse from index.html
-
-    # TODO: ugly, should be prettier
-    posts = Enum.map(posts, fn p -> elem(p, 1) end)
-    {out, _ctx} = Code.eval_quoted(t.tpl,
-                                   [assigns: Keyword.merge(meta,
-                                                           [posts: posts,
-                                                            title: "asdf"])])
-
     fname = "index.html"
-    out_path = Path.join(ConfigAgent.get(:out), fname)
-    File.write!(out_path, out)
+
+    if File.exists? fname do
+      posts = SiteStore.get_all_posts()
+      pages = SiteStore.get_all_pages()
+
+      meta = Ivy.Utils.extract_meta(File.stream!(fname), :init)
+      meta = ConfigAgent.local_conf(meta)
+      t = TemplateStore.get(Keyword.get(meta, :layout, "base"))
+
+      {out, _ctx} = Code.eval_quoted(t.tpl,
+                                     [assigns: Keyword.merge(meta,
+                                                             [posts: posts,
+                                                              pages: pages])])
+
+      fname = "index.html"
+      out_path = Path.join(ConfigAgent.get(:out), fname)
+      File.write!(out_path, out)
+    else
+      IO.puts "Ivy could not locate an 'index.html' template => not generating an index."
+    end
   end
 
   defp prep_includes() do
@@ -264,30 +271,59 @@ Options:
     end
   end
 
-  defp render(f, type) when is_atom(type) do
+  defp parse_md(f) do
     meta = Ivy.Utils.extract_meta(File.stream!(f), :init)
+    meta = ConfigAgent.local_conf(meta)
     lines = case length(meta) do
              x when x > 0 -> x + 2
              _ -> 1
             end
-    md = File.stream!(f)
+    html = File.stream!(f)
     |> Stream.drop(lines)
     |> Enum.to_list
     |> Earmark.to_html
 
+    {html, meta}
+  end
+
+  defp write_html(f, {html, meta}) do
     t = TemplateStore.get(Keyword.get(meta, :layout, "base"))
-    data = Keyword.merge(meta, [content: md])
-    {out, _ctx} = Code.eval_quoted(t.tpl, [assigns: data], __ENV__)
+    data = Keyword.merge(meta, [content: html])
+
+    {html, _ctx} = Code.eval_quoted(t.tpl, [assigns: data], __ENV__)
 
     fname = Path.basename(f, ".md") <> ".html"
     out_path = Path.join(ConfigAgent.get(:out), fname)
-    case type do
-      :post ->
-        SiteStore.set(%Post{uri: fname, contents: md, meta: meta})
-      :page ->
-        SiteStore.set(%Page{uri: "page/" <> fname, html: out, meta: meta})
-    end
-    File.write!(out_path, out)
+
+    File.write!(out_path, html)
+
+    {fname, html}
+  end
+
+  defp render(f, :post) do
+    {html, meta} = parse_md(f)
+    datep = String.split(f, "-", parts: 4)
+    # TODO: do we want to enforce the same filename structure as jekyll?
+
+    date = datep
+    |> Enum.take(3)
+    |> String.to_integer
+    |> List.to_tuple
+
+    {_, time} = File.stat!(f).mtime
+
+    meta = Keyword.merge(meta, [date: {date, time}])
+
+    {fname, _} = write_html(f, {html, meta})
+
+    SiteStore.set(%Post{uri: fname, contents: html, meta: meta})
+  end
+  defp render(f, :page) do
+    {html, meta} = parse_md(f)
+
+    {fname, raw} = write_html(f, {html, meta})
+
+    SiteStore.set(%Page{uri: "page/" <> fname, html: raw, meta: meta})
   end
 end
 
@@ -320,108 +356,6 @@ defmodule SiteStore do
   end
 end
 
-defmodule TemplateStore do
-  @content_regex ~r/<%=\s+@content\s+%>/
-  # TODO: this breaks elixir mode...
-  @incl_regex ~r/<%=\s+@include\s+"([^"]+)"\s+%>/
-
-  def start_link() do
-    Agent.start_link(fn -> HashDict.new() end, name: __MODULE__)
-  end
-
-  def put(k, v) do
-    Agent.update(__MODULE__, &Dict.put(&1, k, v))
-  end
-
-  def get(k) do
-    Agent.get(__MODULE__, &Dict.get(&1, k))
-  end
-
-  @doc """
-Recursively updates all template by traveling along their template hierarchie.
-
-Run *after* you have `prep_template`ed all templates.
-"""
-  def handle_template_hierarchy() do
-    templates = Agent.get(__MODULE__, &(HashDict.values(&1)))
-    Enum.each(templates, &handle_template_hierarchy/1)
-  end
-
-  @doc """
-Compiles all existing template strings for efficiency.
-
-CARE: not idempotent!
-"""
-  def compile_templates() do
-    templates = Agent.get(__MODULE__, &(HashDict.values(&1)))
-    Enum.each(templates, fn t ->
-                compiled = EEx.compile_string(t.tpl)
-                put(t.name, %{t | tpl: compiled})
-              end)
-  end
-
-  @doc """
-Parses a template and add it to the `TemplateStore`.
-"""
-  def prep_template(t) do
-    # use .html.eex?
-    name = Path.basename(t, ".html")
-    meta = Ivy.Utils.extract_meta(File.stream!(t), :init)
-    lines = case length(meta) do
-             x when x > 0 -> x + 2
-             _ -> 1
-           end
-
-    # read the file (after meta) to string
-    raw = File.open!(t, [:read], fn f ->
-                      Enum.each(1..lines, fn _ -> IO.read(f, :line) end)
-                      IO.read(f, :all)
-                    end)
-
-
-    # replace includes with the include contents
-    template = Regex.replace(@incl_regex, raw,
-      fn _, m ->
-        t = TemplateStore.get("include/" <> m)
-        if t do
-          t.tpl
-        else
-          ""
-        end
-      end)
-
-    TemplateStore.put(name, %Template{tpl: template, meta: meta, name: name})
-  end
-
-  defp handle_template_hierarchy(t) do
-    pt = parent_template(t)
-    if pt do
-      # place child temp into content of parent temp
-      template = Regex.replace(@content_regex, pt.tpl, t.tpl)
-
-      t = %{t | tpl: template}
-      pl = Keyword.get(pt.meta, :layout)
-      if pl do
-        meta = Keyword.update!(t.meta, :layout, pl)
-        t = %{t | meta: meta}
-      else
-        meta = Keyword.drop(t.meta, [:layout])
-        t = %{t | meta: meta}
-      end
-      TemplateStore.put(t.name, t)
-      handle_template_hierarchy(t)
-    end
-  end
-
-  defp parent_template(template) do
-    pt = Keyword.get(template.meta, :layout, false)
-    if pt do
-      TemplateStore.get(pt)
-    else
-      false
-    end
-  end
-end
 
 defmodule ConfigAgent do
   @default_config %{out: "_out",
@@ -441,6 +375,10 @@ defmodule ConfigAgent do
 
   def get(k, default \\ nil) do
     Agent.get(__MODULE__, &Dict.get(&1, k, default))
+  end
+
+  def local_conf(local_meta) do
+    Keyword.merge(Agent.get(__MODULE__, fn c -> Dict.to_list(c) end), local_meta)
   end
 
   @doc "Prepends `path` to each `key` in `keys`"
@@ -488,6 +426,8 @@ defmodule Ivy.Skel do
   @gitignore """
 _out/
 """
+
+  # FIXME: transition to run-time definition and use plain string substitution instead?
   @ivy_conf """
 use Mix.Config
 
@@ -499,7 +439,11 @@ config :ivy,
   templates: "_templates",
   includes: "_includes",
   pages: "_pages",
-  static: "static"
+  static: "static",
+  title: "TITLE_PLACEHOLDER",
+  author: "AUTHOR_PLACEHOLDER"
+  # any other keyword defined here is available in all templates,
+  # these keywords can however be overwritten through in markdown meta-data
 """
 
   @readme """
@@ -518,8 +462,22 @@ and then visit [localhost:4000](http://localhost:4000).
     end
     if File.exists?(name) do
       IO.puts "#{name} already exists, aborting."
-      exit({:shutdown, 126})
+      System.halt(126)
     end
+    n = Path.basename(name)
+    pn = IO.gets("Provide a title for your site [#{n}]: ")
+    if String.length(String.strip(pn)) > 0 do
+      n = pn
+    end
+    a = System.get_env("USER")
+    pa = IO.gets("What is your name [#{a}]?")
+    if String.length(String.strip(pa)) > 0 do
+      a = pa
+    end
+
+    conf = String.replace(@ivy_conf, "AUTHOR_PLACEHOLDER", a)
+    conf = String.replace(@ivy_conf, "TITLE_PLACEHOLDER", n)
+
     # create the root dir
     File.mkdir!(name)
     # write README
@@ -527,7 +485,7 @@ and then visit [localhost:4000](http://localhost:4000).
     # write .gitignore
     File.write!(Path.join(p, ".gitignore"), @gitignore)
     # write ivy_conf.exs
-    File.write!(Path.join(p, "ivy_conf.exs"), @ivy_conf)
+    File.write!(Path.join(p, "ivy_conf.exs"), conf)
     # create the default directory structure
     Enum.map(["_out", "_posts", "_templates", "_includes", "_pages", "static"],
              &(File.mkdir!(Path.join(name, &1))))
@@ -535,6 +493,109 @@ and then visit [localhost:4000](http://localhost:4000).
     # TODO: add default styling and a landing page
 
     IO.puts "Your ivy has been planted!"
-    exit({:shutdown, 0})
+    System.halt(0)
+  end
+end
+
+defmodule TemplateStore do
+  @content_regex ~r/<%=\s+@content\s+%>/
+
+  def start_link() do
+    Agent.start_link(fn -> HashDict.new() end, name: __MODULE__)
+  end
+
+  def put(k, v) do
+    Agent.update(__MODULE__, &Dict.put(&1, k, v))
+  end
+
+  def get(k) do
+    Agent.get(__MODULE__, &Dict.get(&1, k))
+  end
+
+  @doc """
+Recursively updates all template by traveling along their template hierarchie.
+
+Run *after* you have `prep_template`ed all templates.
+"""
+  def handle_template_hierarchy() do
+    templates = Agent.get(__MODULE__, &(HashDict.values(&1)))
+    Enum.each(templates, &handle_template_hierarchy/1)
+  end
+
+  @doc """
+Compiles all existing template strings for efficiency.
+
+CARE: not idempotent!
+"""
+  def compile_templates() do
+    templates = Agent.get(__MODULE__, &(HashDict.values(&1)))
+    Enum.each(templates, fn t ->
+                compiled = EEx.compile_string(t.tpl)
+                put(t.name, %{t | tpl: compiled})
+              end)
+  end
+
+  # TODO: this breaks elixir mode...
+  @incl_regex ~r/<%=\s+@include\s+"([^"]+)"\s+%>/
+
+  @doc """
+Parses a template and add it to the `TemplateStore`.
+"""
+  def prep_template(t) do
+    # TODO: use .html.eex?
+    name = Path.basename(t, ".html")
+    meta = Ivy.Utils.extract_meta(File.stream!(t), :init)
+    lines = case length(meta) do
+             x when x > 0 -> x + 2
+             _ -> 1
+           end
+
+    # read the file (after meta) to string
+    raw = File.open!(t, [:read], fn f ->
+                      Enum.each(1..lines, fn _ -> IO.read(f, :line) end)
+                      IO.read(f, :all)
+                    end)
+
+    # replace includes with the include contents
+    template = Regex.replace(@incl_regex, raw,
+      fn _, m ->
+        t = TemplateStore.get("include/" <> m)
+        if t do
+          t.tpl
+        else
+          ""
+        end
+      end)
+
+    TemplateStore.put(name, %Template{tpl: template, meta: meta, name: name})
+  end
+
+  defp handle_template_hierarchy(t) do
+    pt = parent_template(t)
+    if pt do
+      # place child temp into content of parent temp
+      template = Regex.replace(@content_regex, pt.tpl, t.tpl)
+
+      t = %{t | tpl: template}
+      pl = Keyword.get(pt.meta, :layout)
+      if pl do
+        meta = Keyword.update!(t.meta, :layout, pl)
+        t = %{t | meta: meta}
+      else
+        meta = Keyword.drop(t.meta, [:layout])
+        t = %{t | meta: meta}
+      end
+      TemplateStore.put(t.name, t)
+      handle_template_hierarchy(t)
+    end
+  end
+
+  defp parent_template(template) do
+    pt = Keyword.get(template.meta, :layout, false)
+    if pt do
+      TemplateStore.get(pt)
+    else
+      false
+    end
   end
 end
