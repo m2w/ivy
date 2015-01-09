@@ -10,6 +10,10 @@ defmodule Template do
   defstruct tpl: "", meta: [], name: ""
 end
 
+defmodule Paginator do
+  defstruct prev: nil, cur: nil, next: nil, per_page: 5, items: []
+end
+
 defmodule Ivy.Utils do
   @doc """
 Parse a the beginning of a document, extracting any md-style meta-data.
@@ -61,6 +65,8 @@ defmodule Ivy.Core do
 
   @doc "Entry point for the escript."
   def main(args) do
+    System.at_exit(&Ivy.Core.when_done/1)
+
     if length(args) > 0 do
       {parsed, _argv, _errs} = OptionParser.parse(args,
                                                   switches: [port: :integer,
@@ -196,6 +202,11 @@ Options:
     TemplateStore.handle_template_hierarchy()
     TemplateStore.compile_templates()
 
+    # TODO: hook in plugin modules here
+    # plugin modules must expose a handle_content/0 function
+    # plugins can access site data through the named agents and do their thing before ivy continiues
+
+
     # render posts and pages
     Enum.map(md_posts, &render(&1, :post))
     Enum.map(md_pages, &render(&1, :page))
@@ -205,6 +216,13 @@ Options:
 
     elapsed = :timer.now_diff(:erlang.now(), start)
     IO.puts("Ivy finished growing after #{elapsed / 1000000} seconds")
+  end
+
+  @doc "Ensures that ivy terminates as expected even when plugins unexpectedly terminate processing."
+  def when_done(status_code) when status_code == 0 do
+    IO.puts("Ivy stopped growing.")
+  end
+  def when_done(_) do
   end
 
   @doc "Copies files to the `:out` dir."
@@ -240,23 +258,64 @@ Options:
 
     if File.exists? fname do
       posts = SiteStore.get_all_posts()
+
       pages = SiteStore.get_all_pages()
 
       meta = Ivy.Utils.extract_meta(File.stream!(fname), :init)
       meta = ConfigAgent.local_conf(meta)
       t = TemplateStore.get(Keyword.get(meta, :layout, "base"))
 
-      {out, _ctx} = Code.eval_quoted(t.tpl,
-                                     [assigns: Keyword.merge(meta,
-                                                             [posts: posts,
-                                                              pages: pages])])
-
-      fname = "index.html"
-      out_path = Path.join(ConfigAgent.get(:out), fname)
-      File.write!(out_path, out)
+      if ConfigAgent.get(:paginate, false) do
+        fname = "index.html"
+        fpath = Path.join(ConfigAgent.get(:out), fname)
+        write_index(fpath, t, Keyword.merge(meta, [posts: posts, pages: pages]))
+      else
+        per_page = ConfigAgent.get(:paginate_by, 5)
+        paginators = paginate_posts(%Paginator{prev: nil, cur: 0, next: 1, per_page: per_page}, posts)
+        write_paginated_index(t, paginators, meta, pages)
+      end
     else
       IO.puts "Ivy could not locate an 'index.html' template => not generating an index."
     end
+  end
+
+  # TODO: need to make next, cur and prev available as URLs not ints
+  defp write_paginated_index(_, [], _, _) do
+    IO.puts "Created paginated index"
+  end
+  defp write_paginated_index(template, [%Paginator{prev: nil} = paginator|rem], meta, pages) do
+    fname = "index.html"
+    fpath = Path.join(ConfigAgent.get(:out), fname)
+    write_index(fpath, template, Keyword.merge(meta, [pages: pages, paginator: paginator]))
+    write_paginated_index(template, rem, meta, pages)
+  end
+  defp write_paginated_index(template, [%Paginator{cur: cur} = paginator|rem], meta, pages) do
+    dir = Path.join(ConfigAgent.get(:out), "page-"<> Integer.to_string(cur))
+    if !File.dir?(dir) do
+      File.mkdir!(dir)
+    end
+    fpath = Path.join(dir, "index.html")
+    write_index(fpath, template, Keyword.merge(meta, [pages: pages, paginator: paginator]))
+
+    write_paginated_index(template, rem, meta, pages)
+  end
+
+  defp write_index(fpath, template, assigns) do
+    {out, _ctx} = Code.eval_quoted(template.tpl,
+                                   [assigns: assigns])
+    File.write!(fpath, out)
+  end
+
+  # TODO: fix next on the last page, should be nil
+  defp paginate_posts(paginators, []) do
+    paginators
+  end
+  defp paginate_posts([%Paginator{cur: cur, next: next, per_page: per_page}|_] = paginators, posts) do
+    {pp, rem} = Enum.split(posts, per_page)
+
+    npaginator = %Paginator{prev: cur, cur: next, next: next + 1, items: pp}
+
+    paginate_posts([npaginator|paginators], rem)
   end
 
   defp prep_includes() do
@@ -302,18 +361,18 @@ Options:
 
   defp render(f, :post) do
     {html, meta} = parse_md(f)
-    datep = String.split(f, "-", parts: 4)
+    datep = String.split(Path.basename(f), "-", parts: 4)
     # TODO: do we want to enforce the same filename structure as jekyll?
 
     date = datep
     |> Enum.take(3)
-    |> String.to_integer
+    |> Enum.map(&String.to_integer/1)
     |> List.to_tuple
 
     {_, time} = File.stat!(f).mtime
 
     meta = Keyword.merge(meta, [date: {date, time}])
-
+    IO.inspect meta, pretty: true
     {fname, _} = write_html(f, {html, meta})
 
     SiteStore.set(%Post{uri: fname, contents: html, meta: meta})
@@ -476,7 +535,7 @@ and then visit [localhost:4000](http://localhost:4000).
     end
 
     conf = String.replace(@ivy_conf, "AUTHOR_PLACEHOLDER", a)
-    conf = String.replace(@ivy_conf, "TITLE_PLACEHOLDER", n)
+    conf = String.replace(conf, "TITLE_PLACEHOLDER", n)
 
     # create the root dir
     File.mkdir!(name)
