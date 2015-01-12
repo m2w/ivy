@@ -1,17 +1,31 @@
+defmodule Ivy.Types do
+  @type markdown :: String.t
+  @type html :: String.t
+  @type meta :: Keyword.t
+  @type nillable_int :: Integer.t | nil
+end
+
+# TODO: make these types more specific
 defmodule Post do
   defstruct contents: "", meta: [], uri: ""
+  @type t :: %Post{contents: String.t, meta: Ivy.Types.meta, uri: String.t}
 end
 
 defmodule Page do
   defstruct html: "", meta: [], uri: ""
+  @type t :: %Page{html: Ivy.Types.html, meta: Ivy.Types.meta, uri: String.t}
 end
 
 defmodule Template do
   defstruct tpl: "", meta: [], name: ""
+  @type t :: %Template{tpl: String.t, meta: Ivy.Types.meta, name: String.t}
 end
 
 defmodule Paginator do
   defstruct prev: nil, cur: nil, next: nil, per_page: 5, items: []
+  @type t :: %Paginator{prev: Ivy.Types.nillable_int, cur: non_neg_integer,
+                        next: Ivy.Types.nillable_int, per_page: pos_integer,
+                        items: [Post.t]}
 end
 
 defmodule Ivy.Utils do
@@ -20,6 +34,7 @@ Parse a the beginning of a document, extracting any md-style meta-data.
 
 Meta-data is returned as a Keyword.
 """
+  @spec extract_meta(File.Stream.t, :init | :run) :: Ivy.Types.meta
   def extract_meta(f_stream, :init) do
     if String.starts_with? hd(Enum.take(f_stream, 1)), "---" do
        extract_meta(f_stream, :run)
@@ -41,6 +56,7 @@ Meta-data is returned as a Keyword.
   end
 
   @doc "Strip, lowercase and `to_atom` a String."
+  @spec atomify(String.t) :: atom
   def atomify(s) do
     String.to_atom(String.downcase(String.strip(s)))
   end
@@ -56,6 +72,7 @@ defmodule Ivy.Core do
   # pagination
 
   @doc "Runs a local server."
+  @spec run_server(pos_integer) :: :ok
   def run_server(port) do
     {:ok, _} = Plug.Adapters.Cowboy.http LocalServer, [], port: port
     IO.puts "Ivy growing on port #{port}"
@@ -64,6 +81,7 @@ defmodule Ivy.Core do
   end
 
   @doc "Entry point for the escript."
+  @spec main([any]) :: no_return
   def main(args) do
     System.at_exit(&Ivy.Core.when_done/1)
 
@@ -115,14 +133,16 @@ defmodule Ivy.Core do
   end
 
   @doc "Starts all Stores and configures ivy."
+  @spec setup() :: :ok
   def setup() do
-    ConfigAgent.start_link()
-    SiteStore.start_link()
-    TemplateStore.start_link()
+    {:ok, _pid} = ConfigAgent.start_link()
+    {:ok, _pid} = SiteStore.start_link()
+    {:ok, _pid} = TemplateStore.start_link()
     configure()
   end
 
   @doc "Print a help text."
+  @spec show_help() :: :ok
   def show_help() do
     IO.puts """
 ivy #{@version} -- ivy is a static site generator written in Elixir
@@ -151,11 +171,13 @@ Options:
   end
 
   @doc "Print the name and version number."
+  @spec print_version() :: :ok
   def print_version() do
     IO.puts "ivy #{@version}"
   end
 
   @doc "Parses and activates the local config."
+  @spec configure() :: :ok
   def configure() do
     cwd = File.cwd!
     config_file = Path.absname("ivy_conf.exs", cwd)
@@ -168,12 +190,13 @@ Options:
   end
 
   @doc "Parse templates, pages and posts and render them to file."
+  @spec build() :: :ok | no_return
   def build() do
     start = :erlang.now()
     IO.puts "Your ivy is now growing!"
 
-    clean_out_dir()
-    copy_static_files()
+    :ok = clean_out_dir()
+    _paths = copy_static_files()
 
     # parse local config (provide defaults)
     out_dir = ConfigAgent.get(:out)
@@ -198,7 +221,7 @@ Options:
 
     # templating
     templates = Mix.Utils.extract_files([ConfigAgent.get(:templates)], "*.html")
-    Enum.map(templates, &TemplateStore.prep_template/1)
+    Enum.each(templates, &TemplateStore.prep_template/1)
     TemplateStore.handle_template_hierarchy()
     TemplateStore.compile_templates()
 
@@ -208,8 +231,8 @@ Options:
 
 
     # render posts and pages
-    Enum.map(md_posts, &render(&1, :post))
-    Enum.map(md_pages, &render(&1, :page))
+    Enum.each(md_posts, &render(&1, :post))
+    Enum.each(md_pages, &render(&1, :page))
 
     # add index
     build_index()
@@ -219,6 +242,7 @@ Options:
   end
 
   @doc "Ensures that ivy terminates as expected even when plugins unexpectedly terminate processing."
+  @spec when_done(non_neg_integer) :: :ok | no_return
   def when_done(status_code) when status_code == 0 do
     IO.puts("Ivy stopped growing.")
   end
@@ -226,8 +250,9 @@ Options:
   end
 
   @doc "Copies files to the `:out` dir."
+  @spec copy_raw([Path.t]) :: :ok
   def copy_raw([]) do
-    []
+    :ok
   end
   def copy_raw([f|rem_f]) do
     File.cp!(f, ConfigAgent.get(:out))
@@ -235,13 +260,15 @@ Options:
   end
 
   @doc "Removes any stale artefacts from previous runs before building."
+  @spec clean_out_dir() :: :ok | no_return
   def clean_out_dir() do
     out = ConfigAgent.get(:out)
-    File.rm_rf!(out)
+    _paths = File.rm_rf!(out)
     File.mkdir!(out)
   end
 
   @doc "Copies the static dir into `:out`"
+  @spec copy_static_files() :: no_return | [Path.t]
   def copy_static_files() do
     out = ConfigAgent.get(:out)
     static = ConfigAgent.get(:static)
@@ -253,6 +280,7 @@ Options:
   end
 
   @doc "Renders an index.html"
+  @spec build_index() :: :ok
   def build_index() do
     fname = "index.html"
 
@@ -271,7 +299,7 @@ Options:
         write_index(fpath, t, Keyword.merge(meta, [posts: posts, pages: pages]))
       else
         per_page = ConfigAgent.get(:paginate_by, 5)
-        paginators = paginate_posts(%Paginator{prev: nil, cur: 0, next: 1, per_page: per_page}, posts)
+        paginators = paginate_posts([%Paginator{prev: nil, cur: 0, next: 1, per_page: per_page}], posts)
         write_paginated_index(t, paginators, meta, pages)
       end
     else
@@ -280,6 +308,8 @@ Options:
   end
 
   # TODO: need to make next, cur and prev available as URLs not ints
+  @spec write_paginated_index(Template.t, [Paginator.t],
+                              Ivy.Types.meta, [Page.t]) :: :ok
   defp write_paginated_index(_, [], _, _) do
     IO.puts "Created paginated index"
   end
@@ -296,10 +326,10 @@ Options:
     end
     fpath = Path.join(dir, "index.html")
     write_index(fpath, template, Keyword.merge(meta, [pages: pages, paginator: paginator]))
-
     write_paginated_index(template, rem, meta, pages)
   end
 
+  @spec write_index(Path.t, Template.t, Keyword.t) :: :ok
   defp write_index(fpath, template, assigns) do
     {out, _ctx} = Code.eval_quoted(template.tpl,
                                    [assigns: assigns])
@@ -307,6 +337,7 @@ Options:
   end
 
   # TODO: fix next on the last page, should be nil
+  @spec paginate_posts([Paginator.t], [Post.t]) :: [Paginator.t]
   defp paginate_posts(paginators, []) do
     paginators
   end
@@ -318,6 +349,7 @@ Options:
     paginate_posts([npaginator|paginators], rem)
   end
 
+  @spec prep_includes() :: Path.t | :ok
   defp prep_includes() do
     incl = ConfigAgent.get(:includes)
     if File.dir? incl do
@@ -330,6 +362,7 @@ Options:
     end
   end
 
+  @spec parse_md(Path.t) :: {Ivy.Types.html, Ivy.Types.meta}
   defp parse_md(f) do
     meta = Ivy.Utils.extract_meta(File.stream!(f), :init)
     meta = ConfigAgent.local_conf(meta)
@@ -345,6 +378,8 @@ Options:
     {html, meta}
   end
 
+  @spec write_html(Path.t,
+                   {Ivy.Types.html, Ivy.Types.meta}) :: {Path.t, Ivy.Types.html}
   defp write_html(f, {html, meta}) do
     t = TemplateStore.get(Keyword.get(meta, :layout, "base"))
     data = Keyword.merge(meta, [content: html])
@@ -359,6 +394,7 @@ Options:
     {fname, html}
   end
 
+  @spec render(Path.t, :post | :page) :: :ok
   defp render(f, :post) do
     {html, meta} = parse_md(f)
     datep = String.split(Path.basename(f), "-", parts: 4)
@@ -369,10 +405,11 @@ Options:
     |> Enum.map(&String.to_integer/1)
     |> List.to_tuple
 
-    {_, time} = File.stat!(f).mtime
+    stat = File.stat!(f)
+    {_, time} = stat.mtime
 
     meta = Keyword.merge(meta, [date: {date, time}])
-    IO.inspect meta, pretty: true
+
     {fname, _} = write_html(f, {html, meta})
 
     SiteStore.set(%Post{uri: fname, contents: html, meta: meta})
@@ -387,10 +424,12 @@ Options:
 end
 
 defmodule SiteStore do
+  @spec start_link() :: Agent.on_start
   def start_link() do
     Agent.start_link(fn -> HashDict.new() end, name: __MODULE__)
   end
 
+  @spec set(Post.t | Page.t) :: :ok
   def set(%Post{uri: uri} = post) do
     Agent.update(__MODULE__, &Dict.put(&1, uri, post))
   end
@@ -398,18 +437,22 @@ defmodule SiteStore do
     Agent.update(__MODULE__, &Dict.put(&1, uri, page))
   end
 
+  @spec get(String.t) :: Post.t | Page.t | nil
   def get(uri) do
     Agent.get(__MODULE__, &Dict.get(&1, uri))
   end
 
+  @spec get_all_pages() :: [Page.t]
   def get_all_pages() do
     Enum.filter(get_all_content(), fn c -> c.__struct__ == Page end)
   end
 
+  @spec get_all_posts() :: [Post.t]
   def get_all_posts() do
     Enum.filter(get_all_content(), fn c -> c.__struct__ == Post end)
   end
 
+  @spec get_all_content() :: HashDict.t
   def get_all_content() do
     Agent.get(__MODULE__, fn state -> state end)
   end
@@ -424,23 +467,28 @@ defmodule ConfigAgent do
                     includes: "_includes",
                     static: "static"}
 
+  @spec start_link() :: Agent.on_start
   def start_link() do
     Agent.start_link(fn -> HashDict.new() end, name: __MODULE__)
   end
 
+  @spec set(atom, String.t | non_neg_integer | boolean) :: :ok
   def set(k, v) do
     Agent.update(__MODULE__, &Dict.put(&1, k, v))
   end
 
+  @spec get(atom, String.t | non_neg_integer | boolean | nil) :: String.t | non_neg_integer | boolean | nil
   def get(k, default \\ nil) do
     Agent.get(__MODULE__, &Dict.get(&1, k, default))
   end
 
+  @spec local_conf(Keyword.t) :: Keyword.t
   def local_conf(local_meta) do
     Keyword.merge(Agent.get(__MODULE__, fn c -> Dict.to_list(c) end), local_meta)
   end
 
   @doc "Prepends `path` to each `key` in `keys`"
+  @spec prepend_path([atom], Path.t) :: :ok
   def prepend_path(keys, path) do
     Enum.each(keys,
               &(Agent.get_and_update(__MODULE__,
@@ -454,9 +502,11 @@ defmodule ConfigAgent do
   end
 
   @doc "Merges the default config and `config`."
+  @spec set_config(Keyword.t) :: :ok
   def set_config(config) do
     conf = Dict.merge(@default_config, config)
-    Enum.map(conf, fn {k, v} -> set(k, v) end)
+    Enum.each(conf, fn {k, v} -> set(k, v) end)
+    :ok
   end
 end
 
@@ -511,7 +561,8 @@ config :ivy,
 ivy is a static site generator. To get started, simply run `ivy -s`
 and then visit [localhost:4000](http://localhost:4000).
 """
-
+  @doc "Generate a skeleton for an ivy."
+  @spec create(String.t) :: no_return
   def create(name) do
     cwd = File.cwd!
     if Path.type(name) == :relative do
@@ -546,7 +597,7 @@ and then visit [localhost:4000](http://localhost:4000).
     # write ivy_conf.exs
     File.write!(Path.join(p, "ivy_conf.exs"), conf)
     # create the default directory structure
-    Enum.map(["_out", "_posts", "_templates", "_includes", "_pages", "static"],
+    Enum.each(["_out", "_posts", "_templates", "_includes", "_pages", "static"],
              &(File.mkdir!(Path.join(name, &1))))
 
     # TODO: add default styling and a landing page
@@ -559,14 +610,17 @@ end
 defmodule TemplateStore do
   @content_regex ~r/<%=\s+@content\s+%>/
 
+  @spec start_link() :: Agent.on_start
   def start_link() do
     Agent.start_link(fn -> HashDict.new() end, name: __MODULE__)
   end
 
+  @spec put(String.t, Template.t) :: :ok
   def put(k, v) do
     Agent.update(__MODULE__, &Dict.put(&1, k, v))
   end
 
+  @spec get(String.t) :: Template.t | nil
   def get(k) do
     Agent.get(__MODULE__, &Dict.get(&1, k))
   end
@@ -576,6 +630,7 @@ Recursively updates all template by traveling along their template hierarchie.
 
 Run *after* you have `prep_template`ed all templates.
 """
+  @spec handle_template_hierarchy() :: :ok
   def handle_template_hierarchy() do
     templates = Agent.get(__MODULE__, &(HashDict.values(&1)))
     Enum.each(templates, &handle_template_hierarchy/1)
@@ -586,12 +641,13 @@ Compiles all existing template strings for efficiency.
 
 CARE: not idempotent!
 """
+  @spec compile_templates() :: :ok
   def compile_templates() do
     templates = Agent.get(__MODULE__, &(HashDict.values(&1)))
     Enum.each(templates, fn t ->
-                compiled = EEx.compile_string(t.tpl)
-                put(t.name, %{t | tpl: compiled})
-              end)
+      compiled = EEx.compile_string(t.tpl)
+      put(t.name, %{t | tpl: compiled})
+    end)
   end
 
   # TODO: this breaks elixir mode...
@@ -600,6 +656,7 @@ CARE: not idempotent!
   @doc """
 Parses a template and add it to the `TemplateStore`.
 """
+  @spec prep_template(Path.t) :: :ok
   def prep_template(t) do
     # TODO: use .html.eex?
     name = Path.basename(t, ".html")
@@ -629,6 +686,7 @@ Parses a template and add it to the `TemplateStore`.
     TemplateStore.put(name, %Template{tpl: template, meta: meta, name: name})
   end
 
+  @spec handle_template_hierarchy(Template.t) :: no_return
   defp handle_template_hierarchy(t) do
     pt = parent_template(t)
     if pt do
@@ -649,6 +707,7 @@ Parses a template and add it to the `TemplateStore`.
     end
   end
 
+  @spec parent_template(Template.t) :: Template.t | false
   defp parent_template(template) do
     pt = Keyword.get(template.meta, :layout, false)
     if pt do
