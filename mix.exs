@@ -5,6 +5,8 @@ defmodule Ivy.Main.Mixfile do
     [app: :ivy,
      version: "0.0.1",
      elixir: "~> 1.0",
+     source_url: "https://github.com/m2w/ivy",
+     homepage: "https://m2w.github.com/ivy",
      escript: [main_module: Ivy.Core,
                emu_args: "-setcookie weCanBlogForDays!"],
      deps: deps]
@@ -35,6 +37,7 @@ defmodule Ivy.Main.Mixfile do
      {:cowboy, "~> 1.0.0"},
      {:plug, "~> 0.9.0"},
      {:cowlib, "1.0.0"},
-     {:ranch, "~> 1.0.0"}]
+     {:ranch, "~> 1.0.0"},
+     {:ex_doc, "~> 0.6", only: :dev}]
   end
 end

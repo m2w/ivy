@@ -7,21 +7,45 @@ end
 
 # TODO: make these types more specific
 defmodule Post do
+  @moduledoc """
+Posts represent markdown documents that form the main content of an ivy site.
+
+They are composed of meta data, the content itself and a URI.
+"""
+
   defstruct contents: "", meta: [], uri: ""
   @type t :: %Post{contents: String.t, meta: Ivy.Types.meta, uri: String.t}
 end
 
 defmodule Page do
+  @moduledoc """
+A Page refers a single page on an ivy site. They differ from posts only
+in their URLs.
+"""
+
   defstruct html: "", meta: [], uri: ""
   @type t :: %Page{html: Ivy.Types.html, meta: Ivy.Types.meta, uri: String.t}
 end
 
 defmodule Template do
+  @moduledoc """
+Templates are parsed markdown documents.
+
+They can handle @include directives to include shared snippets and
+implement a simple form of inheritance.
+"""
+
   defstruct tpl: "", meta: [], name: ""
   @type t :: %Template{tpl: String.t, meta: Ivy.Types.meta, name: String.t}
 end
 
 defmodule Paginator do
+  @moduledoc """
+A wrapper for paginated items.
+
+Contains links to itself, previous and following items.
+"""
+
   defstruct prev: nil, cur: nil, next: nil, per_page: 5, items: []
   @type t :: %Paginator{prev: Ivy.Types.nillable_int, cur: non_neg_integer,
                         next: Ivy.Types.nillable_int, per_page: pos_integer,
@@ -29,6 +53,10 @@ defmodule Paginator do
 end
 
 defmodule Ivy.Utils do
+  @moduledoc """
+Contains simple helper and utility functions.
+"""
+
   @doc """
 Parse a the beginning of a document, extracting any md-style meta-data.
 
@@ -63,13 +91,16 @@ Meta-data is returned as a Keyword.
 end
 
 defmodule Ivy.Core do
+  @moduledoc """
+TODO
+"""
+
   @version Keyword.get(Mix.Project.config(), :version)
   # TODO
   # "watch" functionality
   # "plugin" framework
   # tests
   # error handling
-  # pagination
 
   @doc "Runs a local server."
   @spec run_server(pos_integer) :: :ok
@@ -222,8 +253,8 @@ Options:
     # templating
     templates = Mix.Utils.extract_files([ConfigAgent.get(:templates)], "*.html")
     Enum.each(templates, &TemplateStore.prep_template/1)
-    TemplateStore.handle_template_hierarchy()
-    TemplateStore.compile_templates()
+    TemplateStore.handle_template_hierarchy!()
+    TemplateStore.compile_templates!()
 
     # TODO: hook in plugin modules here
     # plugin modules must expose a handle_content/0 function
@@ -398,7 +429,6 @@ Options:
   defp render(f, :post) do
     {html, meta} = parse_md(f)
     datep = String.split(Path.basename(f), "-", parts: 4)
-    # TODO: do we want to enforce the same filename structure as jekyll?
 
     date = datep
     |> Enum.take(3)
@@ -424,11 +454,18 @@ Options:
 end
 
 defmodule SiteStore do
+  @moduledoc """
+SiteStore is essentially a cache, that holds all (rendered) posts and pages
+in memory. This cache takes the form of a `HashDict.t`.
+"""
+
+  @doc "Starts and links the `SiteStore` agent"
   @spec start_link() :: Agent.on_start
   def start_link() do
     Agent.start_link(fn -> HashDict.new() end, name: __MODULE__)
   end
 
+  @doc "Create/update a `SiteStore` entry."
   @spec set(Post.t | Page.t) :: :ok
   def set(%Post{uri: uri} = post) do
     Agent.update(__MODULE__, &Dict.put(&1, uri, post))
@@ -437,29 +474,36 @@ defmodule SiteStore do
     Agent.update(__MODULE__, &Dict.put(&1, uri, page))
   end
 
+  @doc "Returns a specific entry from the `SiteStore`."
   @spec get(String.t) :: Post.t | Page.t | nil
   def get(uri) do
     Agent.get(__MODULE__, &Dict.get(&1, uri))
   end
 
+  @doc "Returns a list of all pages."
   @spec get_all_pages() :: [Page.t]
   def get_all_pages() do
     Enum.filter(get_all_content(), fn c -> c.__struct__ == Page end)
   end
 
+  @doc "Returns a list of all posts."
   @spec get_all_posts() :: [Post.t]
   def get_all_posts() do
     Enum.filter(get_all_content(), fn c -> c.__struct__ == Post end)
   end
 
   @spec get_all_content() :: HashDict.t
-  def get_all_content() do
+  defp get_all_content() do
     Agent.get(__MODULE__, fn state -> state end)
   end
 end
 
 
 defmodule ConfigAgent do
+  @moduledoc """
+The `ConfigAgent` stores all site-wide configuration and meta-data for easy retrieval.
+"""
+
   @default_config %{out: "_out",
                     posts: "_posts",
                     pages: "_pages",
@@ -467,21 +511,29 @@ defmodule ConfigAgent do
                     includes: "_includes",
                     static: "static"}
 
+  @doc "Starts and links to the `ConfigAgent`."
   @spec start_link() :: Agent.on_start
   def start_link() do
     Agent.start_link(fn -> HashDict.new() end, name: __MODULE__)
   end
 
+  @doc "Sets a config entry."
   @spec set(atom, String.t | non_neg_integer | boolean) :: :ok
   def set(k, v) do
     Agent.update(__MODULE__, &Dict.put(&1, k, v))
   end
 
+  @doc "Returns the entry associated with a key."
   @spec get(atom, String.t | non_neg_integer | boolean | nil) :: String.t | non_neg_integer | boolean | nil
   def get(k, default \\ nil) do
     Agent.get(__MODULE__, &Dict.get(&1, k, default))
   end
 
+  @doc """
+Returns a `Keyword.t` that merges in the global configuration.
+
+Local configuration overwrites existing keys from the global configuration.
+"""
   @spec local_conf(Keyword.t) :: Keyword.t
   def local_conf(local_meta) do
     Keyword.merge(Agent.get(__MODULE__, fn c -> Dict.to_list(c) end), local_meta)
@@ -511,6 +563,12 @@ defmodule ConfigAgent do
 end
 
 defmodule LocalServer do
+  @docmodule """
+`LocalServer` is a simple plug based server to view your site locally.
+
+It is soley intended for development.
+"""
+
   use Plug.Builder
 
   # FIXME: how can I make `from` dynamic???
@@ -521,6 +579,9 @@ defmodule LocalServer do
     options
   end
 
+  @doc """
+Handles any 404s encountered by the local server, either returning a dedicated 404 page (if available) or a simple 404 "not found"
+"""
   def not_found(conn, _) do
     not_found = SiteStore.get("page/404")
     if not_found do
@@ -532,6 +593,10 @@ defmodule LocalServer do
 end
 
 defmodule Ivy.Skel do
+  @moduledoc """
+Contains functionality and templates to generate a basic skeleton for an ivy site.
+"""
+
   @gitignore """
 _out/
 """
@@ -561,6 +626,7 @@ config :ivy,
 ivy is a static site generator. To get started, simply run `ivy -s`
 and then visit [localhost:4000](http://localhost:4000).
 """
+
   @doc "Generate a skeleton for an ivy."
   @spec create(String.t) :: no_return
   def create(name) do
@@ -630,8 +696,8 @@ Recursively updates all template by traveling along their template hierarchie.
 
 Run *after* you have `prep_template`ed all templates.
 """
-  @spec handle_template_hierarchy() :: :ok
-  def handle_template_hierarchy() do
+  @spec handle_template_hierarchy!() :: :ok
+  def handle_template_hierarchy!() do
     templates = Agent.get(__MODULE__, &(HashDict.values(&1)))
     Enum.each(templates, &handle_template_hierarchy/1)
   end
@@ -641,8 +707,8 @@ Compiles all existing template strings for efficiency.
 
 CARE: not idempotent!
 """
-  @spec compile_templates() :: :ok
-  def compile_templates() do
+  @spec compile_templates!() :: :ok
+  def compile_templates!() do
     templates = Agent.get(__MODULE__, &(HashDict.values(&1)))
     Enum.each(templates, fn t ->
       compiled = EEx.compile_string(t.tpl)
