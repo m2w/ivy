@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>ConfigAgent</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="css/style.css" type="text/css" media="screen" charset="utf-8" />
+    <link rel="stylesheet" href="css/elixir.css" type="text/css" media="screen" charset="utf-8" />
+    <script type="text/javascript" charset="utf-8">
+      relpath = '';
+      if (relpath != '') relpath += '/';
+    </script>
+
+    <script type="text/javascript" charset="utf-8" src="js/jquery.js"></script>
+    <script type="text/javascript" charset="utf-8" src="js/app.js"></script>
+    <script type="text/javascript" charset="utf-8" src="js/highlight.pack.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+  </head>
+
+  <body>
+    <script type="text/javascript" charset="utf-8">
+      if (window.top.frames.main) document.body.className = 'frames';
+    </script>
+
+    <section id="content">
+      <div class="breadcrumbs">ivy v0.0.1 &rarr; <a href="overview.html">Overview</a> &rarr; <a href="ConfigAgent.html">ConfigAgent</a></div>
+      <h1>
+        ConfigAgent
+        
+      </h1>
+
+      <ul class="summary_links">
+        
+          <li><a href="#summary">Summary</a></li>
+        
+        
+        
+          <li><a href="#functions_details">Functions</a></li>
+        
+        
+        
+      </ul>
+
+      
+        <section id="moduledoc" class="docstring">
+          <p>The <a href="ConfigAgent.html"><code class="inline">ConfigAgent</code></a> stores all site-wide configuration and meta-data for easy retrieval.</p>
+
+        </section>
+      
+
+      
+        <a href="https://github.com/m2w/ivy/blob/master/lib/ivy.ex#L506" class="view_source">Source</a>
+      
+
+      
+        <h2 id="summary">Summary<span class="detail_header_links"><a class="to_top_link" href="#content" title="To the top of the page">&uarr;</a></span></h2>
+        <table class="summary">
+          <tr>
+  <td class="summary_signature"><a href="#get/2">get(k, default \\ nil)</a></td>
+  
+    <td class="summary_synopsis"><p>Returns the entry associated with a key</p>
+</td>
+  
+</tr>
+<tr>
+  <td class="summary_signature"><a href="#local_conf/1">local_conf(local_meta)</a></td>
+  
+    <td class="summary_synopsis"><p>Returns a <code class="inline">Keyword.t</code> that merges in the global configuration</p>
+</td>
+  
+</tr>
+<tr>
+  <td class="summary_signature"><a href="#prepend_path/2">prepend_path(keys, path)</a></td>
+  
+    <td class="summary_synopsis"><p>Prepends <code class="inline">path</code> to each <code class="inline">key</code> in <code class="inline">keys</code></p>
+</td>
+  
+</tr>
+<tr>
+  <td class="summary_signature"><a href="#set/2">set(k, v)</a></td>
+  
+    <td class="summary_synopsis"><p>Sets a config entry</p>
+</td>
+  
+</tr>
+<tr>
+  <td class="summary_signature"><a href="#set_config/1">set_config(config)</a></td>
+  
+    <td class="summary_synopsis"><p>Merges the default config and <code class="inline">config</code></p>
+</td>
+  
+</tr>
+<tr>
+  <td class="summary_signature"><a href="#start_link/0">start_link()</a></td>
+  
+    <td class="summary_synopsis"><p>Starts and links to the <a href="ConfigAgent.html"><code class="inline">ConfigAgent</code></a></p>
+</td>
+  
+</tr>
+
+        </table>
+      
+
+      
+
+      
+        <section id="functions_details" class="details_list">
+          <h2>Functions</h2>
+          <section class="detail">
+  <div class="detail_header" id="get/2">
+    <span class="signature"><strong>get(k, default \\ nil)</strong></span>
+    <div class="detail_header_links">
+      <span class="detail_type">(function)</span>
+      <a href="#get/2" class="detail_link" title="Link to this function">#</a>
+      <a class="to_top_link" href="#content" title="To the top of the page">&uarr;</a>
+    </div>
+  </div>
+  
+    <p>Specs:</p>
+    <ul class="spec">
+      
+        <li>get(atom, <a href="http://elixir-lang.org/docs/stable/elixir/String.html#t:t/0">String.t</a> | non_neg_integer | boolean | nil) :: <a href="http://elixir-lang.org/docs/stable/elixir/String.html#t:t/0">String.t</a> | non_neg_integer | boolean | nil</li>
+      
+    </ul>
+  
+  <section class="docstring">
+    <p>Returns the entry associated with a key.</p>
+
+  </section>
+  
+    <a href="https://github.com/m2w/ivy/blob/master/lib/ivy.ex#L532" class="view_source">Source</a>
+  
+</section>
+<section class="detail">
+  <div class="detail_header" id="local_conf/1">
+    <span class="signature"><strong>local_conf(local_meta)</strong></span>
+    <div class="detail_header_links">
+      <span class="detail_type">(function)</span>
+      <a href="#local_conf/1" class="detail_link" title="Link to this function">#</a>
+      <a class="to_top_link" href="#content" title="To the top of the page">&uarr;</a>
+    </div>
+  </div>
+  
+    <p>Specs:</p>
+    <ul class="spec">
+      
+        <li>local_conf(<a href="http://elixir-lang.org/docs/stable/elixir/Keyword.html#t:t/0">Keyword.t</a>) :: <a href="http://elixir-lang.org/docs/stable/elixir/Keyword.html#t:t/0">Keyword.t</a></li>
+      
+    </ul>
+  
+  <section class="docstring">
+    <p>Returns a <code class="inline">Keyword.t</code> that merges in the global configuration.</p>
+<p>Local configuration overwrites existing keys from the global configuration.</p>
+
+  </section>
+  
+    <a href="https://github.com/m2w/ivy/blob/master/lib/ivy.ex#L542" class="view_source">Source</a>
+  
+</section>
+<section class="detail">
+  <div class="detail_header" id="prepend_path/2">
+    <span class="signature"><strong>prepend_path(keys, path)</strong></span>
+    <div class="detail_header_links">
+      <span class="detail_type">(function)</span>
+      <a href="#prepend_path/2" class="detail_link" title="Link to this function">#</a>
+      <a class="to_top_link" href="#content" title="To the top of the page">&uarr;</a>
+    </div>
+  </div>
+  
+    <p>Specs:</p>
+    <ul class="spec">
+      
+        <li>prepend_path([atom], <a href="http://elixir-lang.org/docs/stable/elixir/Path.html#t:t/0">Path.t</a>) :: :ok</li>
+      
+    </ul>
+  
+  <section class="docstring">
+    <p>Prepends <code class="inline">path</code> to each <code class="inline">key</code> in <code class="inline">keys</code></p>
+
+  </section>
+  
+    <a href="https://github.com/m2w/ivy/blob/master/lib/ivy.ex#L548" class="view_source">Source</a>
+  
+</section>
+<section class="detail">
+  <div class="detail_header" id="set/2">
+    <span class="signature"><strong>set(k, v)</strong></span>
+    <div class="detail_header_links">
+      <span class="detail_type">(function)</span>
+      <a href="#set/2" class="detail_link" title="Link to this function">#</a>
+      <a class="to_top_link" href="#content" title="To the top of the page">&uarr;</a>
+    </div>
+  </div>
+  
+    <p>Specs:</p>
+    <ul class="spec">
+      
+        <li>set(atom, <a href="http://elixir-lang.org/docs/stable/elixir/String.html#t:t/0">String.t</a> | non_neg_integer | boolean) :: :ok</li>
+      
+    </ul>
+  
+  <section class="docstring">
+    <p>Sets a config entry.</p>
+
+  </section>
+  
+    <a href="https://github.com/m2w/ivy/blob/master/lib/ivy.ex#L526" class="view_source">Source</a>
+  
+</section>
+<section class="detail">
+  <div class="detail_header" id="set_config/1">
+    <span class="signature"><strong>set_config(config)</strong></span>
+    <div class="detail_header_links">
+      <span class="detail_type">(function)</span>
+      <a href="#set_config/1" class="detail_link" title="Link to this function">#</a>
+      <a class="to_top_link" href="#content" title="To the top of the page">&uarr;</a>
+    </div>
+  </div>
+  
+    <p>Specs:</p>
+    <ul class="spec">
+      
+        <li>set_config(<a href="http://elixir-lang.org/docs/stable/elixir/Keyword.html#t:t/0">Keyword.t</a>) :: :ok</li>
+      
+    </ul>
+  
+  <section class="docstring">
+    <p>Merges the default config and <code class="inline">config</code>.</p>
+
+  </section>
+  
+    <a href="https://github.com/m2w/ivy/blob/master/lib/ivy.ex#L562" class="view_source">Source</a>
+  
+</section>
+<section class="detail">
+  <div class="detail_header" id="start_link/0">
+    <span class="signature"><strong>start_link()</strong></span>
+    <div class="detail_header_links">
+      <span class="detail_type">(function)</span>
+      <a href="#start_link/0" class="detail_link" title="Link to this function">#</a>
+      <a class="to_top_link" href="#content" title="To the top of the page">&uarr;</a>
+    </div>
+  </div>
+  
+    <p>Specs:</p>
+    <ul class="spec">
+      
+        <li>start_link :: <a href="http://elixir-lang.org/docs/stable/elixir/Agent.html#t:on_start/0">Agent.on_start</a></li>
+      
+    </ul>
+  
+  <section class="docstring">
+    <p>Starts and links to the <a href="ConfigAgent.html"><code class="inline">ConfigAgent</code></a>.</p>
+
+  </section>
+  
+    <a href="https://github.com/m2w/ivy/blob/master/lib/ivy.ex#L520" class="view_source">Source</a>
+  
+</section>
+
+        </section>
+      
+
+      
+
+      
+    </section>
+  </body>
+</html>

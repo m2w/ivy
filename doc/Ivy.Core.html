@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Ivy.Core</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="css/style.css" type="text/css" media="screen" charset="utf-8" />
+    <link rel="stylesheet" href="css/elixir.css" type="text/css" media="screen" charset="utf-8" />
+    <script type="text/javascript" charset="utf-8">
+      relpath = '';
+      if (relpath != '') relpath += '/';
+    </script>
+
+    <script type="text/javascript" charset="utf-8" src="js/jquery.js"></script>
+    <script type="text/javascript" charset="utf-8" src="js/app.js"></script>
+    <script type="text/javascript" charset="utf-8" src="js/highlight.pack.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+  </head>
+
+  <body>
+    <script type="text/javascript" charset="utf-8">
+      if (window.top.frames.main) document.body.className = 'frames';
+    </script>
+
+    <section id="content">
+      <div class="breadcrumbs">ivy v0.0.1 &rarr; <a href="overview.html">Overview</a> &rarr; Ivy &rarr; <a href="Ivy.Core.html">Core</a></div>
+      <h1>
+        Ivy.Core
+        
+      </h1>
+
+      <ul class="summary_links">
+        
+          <li><a href="#summary">Summary</a></li>
+        
+        
+        
+          <li><a href="#functions_details">Functions</a></li>
+        
+        
+        
+      </ul>
+
+      
+        <section id="moduledoc" class="docstring">
+          <p><a href="Ivy.Core.html"><code class="inline">Ivy.Core</code></a> contains the majority of ivy’s logic and its <a href="#main/1"><code class="inline">main/1</code></a>.</p>
+
+        </section>
+      
+
+      
+        <a href="https://github.com/m2w/ivy/blob/master/lib/ivy.ex#L97" class="view_source">Source</a>
+      
+
+      
+        <h2 id="summary">Summary<span class="detail_header_links"><a class="to_top_link" href="#content" title="To the top of the page">&uarr;</a></span></h2>
+        <table class="summary">
+          <tr>
+  <td class="summary_signature"><a href="#build/0">build()</a></td>
+  
+    <td class="summary_synopsis"><p>Parse templates, pages and posts and render them to file</p>
+</td>
+  
+</tr>
+<tr>
+  <td class="summary_signature"><a href="#build_index/0">build_index()</a></td>
+  
+    <td class="summary_synopsis"><p>Renders an index.html</p>
+</td>
+  
+</tr>
+<tr>
+  <td class="summary_signature"><a href="#clean_out_dir/0">clean_out_dir()</a></td>
+  
+    <td class="summary_synopsis"><p>Removes any stale artefacts from previous runs before building</p>
+</td>
+  
+</tr>
+<tr>
+  <td class="summary_signature"><a href="#configure/0">configure()</a></td>
+  
+    <td class="summary_synopsis"><p>Parses and activates the local config</p>
+</td>
+  
+</tr>
+<tr>
+  <td class="summary_signature"><a href="#copy_raw/1">copy_raw(list1)</a></td>
+  
+    <td class="summary_synopsis"><p>Copies files to the <code class="inline">:out</code> dir</p>
+</td>
+  
+</tr>
+<tr>
+  <td class="summary_signature"><a href="#copy_static_files/0">copy_static_files()</a></td>
+  
+    <td class="summary_synopsis"><p>Copies the static dir into <code class="inline">:out</code></p>
+</td>
+  
+</tr>
+<tr>
+  <td class="summary_signature"><a href="#main/1">main(args)</a></td>
+  
+    <td class="summary_synopsis"><p>Entry point for the escript</p>
+</td>
+  
+</tr>
+<tr>
+  <td class="summary_signature"><a href="#print_version/0">print_version()</a></td>
+  
+    <td class="summary_synopsis"><p>Print the name and version number</p>
+</td>
+  
+</tr>
+<tr>
+  <td class="summary_signature"><a href="#run_server/1">run_server(port)</a></td>
+  
+    <td class="summary_synopsis"><p>Runs a local server</p>
+</td>
+  
+</tr>
+<tr>
+  <td class="summary_signature"><a href="#setup/0">setup()</a></td>
+  
+    <td class="summary_synopsis"><p>Starts all Stores and configures ivy</p>
+</td>
+  
+</tr>
+<tr>
+  <td class="summary_signature"><a href="#show_help/0">show_help()</a></td>
+  
+    <td class="summary_synopsis"><p>Print a help text</p>
+</td>
+  
+</tr>
+<tr>
+  <td class="summary_signature"><a href="#when_done/1">when_done(status_code)</a></td>
+  
+    <td class="summary_synopsis"><p>Ensures that ivy terminates as expected even when plugins unexpectedly terminate processing</p>
+</td>
+  
+</tr>
+
+        </table>
+      
+
+      
+
+      
+        <section id="functions_details" class="details_list">
+          <h2>Functions</h2>
+          <section class="detail">
+  <div class="detail_header" id="build/0">
+    <span class="signature"><strong>build()</strong></span>
+    <div class="detail_header_links">
+      <span class="detail_type">(function)</span>
+      <a href="#build/0" class="detail_link" title="Link to this function">#</a>
+      <a class="to_top_link" href="#content" title="To the top of the page">&uarr;</a>
+    </div>
+  </div>
+  
+    <p>Specs:</p>
+    <ul class="spec">
+      
+        <li>build :: :ok | no_return</li>
+      
+    </ul>
+  
+  <section class="docstring">
+    <p>Parse templates, pages and posts and render them to file.</p>
+
+  </section>
+  
+    <a href="https://github.com/m2w/ivy/blob/master/lib/ivy.ex#L229" class="view_source">Source</a>
+  
+</section>
+<section class="detail">
+  <div class="detail_header" id="build_index/0">
+    <span class="signature"><strong>build_index()</strong></span>
+    <div class="detail_header_links">
+      <span class="detail_type">(function)</span>
+      <a href="#build_index/0" class="detail_link" title="Link to this function">#</a>
+      <a class="to_top_link" href="#content" title="To the top of the page">&uarr;</a>
+    </div>
+  </div>
+  
+    <p>Specs:</p>
+    <ul class="spec">
+      
+        <li>build_index :: :ok</li>
+      
+    </ul>
+  
+  <section class="docstring">
+    <p>Renders an index.html</p>
+
+  </section>
+  
+    <a href="https://github.com/m2w/ivy/blob/master/lib/ivy.ex#L319" class="view_source">Source</a>
+  
+</section>
+<section class="detail">
+  <div class="detail_header" id="clean_out_dir/0">
+    <span class="signature"><strong>clean_out_dir()</strong></span>
+    <div class="detail_header_links">
+      <span class="detail_type">(function)</span>
+      <a href="#clean_out_dir/0" class="detail_link" title="Link to this function">#</a>
+      <a class="to_top_link" href="#content" title="To the top of the page">&uarr;</a>
+    </div>
+  </div>
+  
+    <p>Specs:</p>
+    <ul class="spec">
+      
+        <li>clean_out_dir :: :ok | no_return</li>
+      
+    </ul>
+  
+  <section class="docstring">
+    <p>Removes any stale artefacts from previous runs before building.</p>
+
+  </section>
+  
+    <a href="https://github.com/m2w/ivy/blob/master/lib/ivy.ex#L299" class="view_source">Source</a>
+  
+</section>
+<section class="detail">
+  <div class="detail_header" id="configure/0">
+    <span class="signature"><strong>configure()</strong></span>
+    <div class="detail_header_links">
+      <span class="detail_type">(function)</span>
+      <a href="#configure/0" class="detail_link" title="Link to this function">#</a>
+      <a class="to_top_link" href="#content" title="To the top of the page">&uarr;</a>
+    </div>
+  </div>
+  
+    <p>Specs:</p>
+    <ul class="spec">
+      
+        <li>configure :: :ok</li>
+      
+    </ul>
+  
+  <section class="docstring">
+    <p>Parses and activates the local config.</p>
+
+  </section>
+  
+    <a href="https://github.com/m2w/ivy/blob/master/lib/ivy.ex#L216" class="view_source">Source</a>
+  
+</section>
+<section class="detail">
+  <div class="detail_header" id="copy_raw/1">
+    <span class="signature"><strong>copy_raw(list1)</strong></span>
+    <div class="detail_header_links">
+      <span class="detail_type">(function)</span>
+      <a href="#copy_raw/1" class="detail_link" title="Link to this function">#</a>
+      <a class="to_top_link" href="#content" title="To the top of the page">&uarr;</a>
+    </div>
+  </div>
+  
+    <p>Specs:</p>
+    <ul class="spec">
+      
+        <li>copy_raw([<a href="http://elixir-lang.org/docs/stable/elixir/Path.html#t:t/0">Path.t</a>]) :: :ok</li>
+      
+    </ul>
+  
+  <section class="docstring">
+    <p>Copies files to the <code class="inline">:out</code> dir.</p>
+
+  </section>
+  
+    <a href="https://github.com/m2w/ivy/blob/master/lib/ivy.ex#L289" class="view_source">Source</a>
+  
+</section>
+<section class="detail">
+  <div class="detail_header" id="copy_static_files/0">
+    <span class="signature"><strong>copy_static_files()</strong></span>
+    <div class="detail_header_links">
+      <span class="detail_type">(function)</span>
+      <a href="#copy_static_files/0" class="detail_link" title="Link to this function">#</a>
+      <a class="to_top_link" href="#content" title="To the top of the page">&uarr;</a>
+    </div>
+  </div>
+  
+    <p>Specs:</p>
+    <ul class="spec">
+      
+        <li>copy_static_files :: no_return | [<a href="http://elixir-lang.org/docs/stable/elixir/Path.html#t:t/0">Path.t</a>]</li>
+      
+    </ul>
+  
+  <section class="docstring">
+    <p>Copies the static dir into <code class="inline">:out</code></p>
+
+  </section>
+  
+    <a href="https://github.com/m2w/ivy/blob/master/lib/ivy.ex#L307" class="view_source">Source</a>
+  
+</section>
+<section class="detail">
+  <div class="detail_header" id="main/1">
+    <span class="signature"><strong>main(args)</strong></span>
+    <div class="detail_header_links">
+      <span class="detail_type">(function)</span>
+      <a href="#main/1" class="detail_link" title="Link to this function">#</a>
+      <a class="to_top_link" href="#content" title="To the top of the page">&uarr;</a>
+    </div>
+  </div>
+  
+    <p>Specs:</p>
+    <ul class="spec">
+      
+        <li>main([any]) :: no_return</li>
+      
+    </ul>
+  
+  <section class="docstring">
+    <p>Entry point for the escript.</p>
+
+  </section>
+  
+    <a href="https://github.com/m2w/ivy/blob/master/lib/ivy.ex#L120" class="view_source">Source</a>
+  
+</section>
+<section class="detail">
+  <div class="detail_header" id="print_version/0">
+    <span class="signature"><strong>print_version()</strong></span>
+    <div class="detail_header_links">
+      <span class="detail_type">(function)</span>
+      <a href="#print_version/0" class="detail_link" title="Link to this function">#</a>
+      <a class="to_top_link" href="#content" title="To the top of the page">&uarr;</a>
+    </div>
+  </div>
+  
+    <p>Specs:</p>
+    <ul class="spec">
+      
+        <li>print_version :: :ok</li>
+      
+    </ul>
+  
+  <section class="docstring">
+    <p>Print the name and version number.</p>
+
+  </section>
+  
+    <a href="https://github.com/m2w/ivy/blob/master/lib/ivy.ex#L210" class="view_source">Source</a>
+  
+</section>
+<section class="detail">
+  <div class="detail_header" id="run_server/1">
+    <span class="signature"><strong>run_server(port)</strong></span>
+    <div class="detail_header_links">
+      <span class="detail_type">(function)</span>
+      <a href="#run_server/1" class="detail_link" title="Link to this function">#</a>
+      <a class="to_top_link" href="#content" title="To the top of the page">&uarr;</a>
+    </div>
+  </div>
+  
+    <p>Specs:</p>
+    <ul class="spec">
+      
+        <li>run_server(pos_integer) :: :ok</li>
+      
+    </ul>
+  
+  <section class="docstring">
+    <p>Runs a local server.</p>
+
+  </section>
+  
+    <a href="https://github.com/m2w/ivy/blob/master/lib/ivy.ex#L111" class="view_source">Source</a>
+  
+</section>
+<section class="detail">
+  <div class="detail_header" id="setup/0">
+    <span class="signature"><strong>setup()</strong></span>
+    <div class="detail_header_links">
+      <span class="detail_type">(function)</span>
+      <a href="#setup/0" class="detail_link" title="Link to this function">#</a>
+      <a class="to_top_link" href="#content" title="To the top of the page">&uarr;</a>
+    </div>
+  </div>
+  
+    <p>Specs:</p>
+    <ul class="spec">
+      
+        <li>setup :: :ok</li>
+      
+    </ul>
+  
+  <section class="docstring">
+    <p>Starts all Stores and configures ivy.</p>
+
+  </section>
+  
+    <a href="https://github.com/m2w/ivy/blob/master/lib/ivy.ex#L172" class="view_source">Source</a>
+  
+</section>
+<section class="detail">
+  <div class="detail_header" id="show_help/0">
+    <span class="signature"><strong>show_help()</strong></span>
+    <div class="detail_header_links">
+      <span class="detail_type">(function)</span>
+      <a href="#show_help/0" class="detail_link" title="Link to this function">#</a>
+      <a class="to_top_link" href="#content" title="To the top of the page">&uarr;</a>
+    </div>
+  </div>
+  
+    <p>Specs:</p>
+    <ul class="spec">
+      
+        <li>show_help :: :ok</li>
+      
+    </ul>
+  
+  <section class="docstring">
+    <p>Print a help text.</p>
+
+  </section>
+  
+    <a href="https://github.com/m2w/ivy/blob/master/lib/ivy.ex#L181" class="view_source">Source</a>
+  
+</section>
+<section class="detail">
+  <div class="detail_header" id="when_done/1">
+    <span class="signature"><strong>when_done(status_code)</strong></span>
+    <div class="detail_header_links">
+      <span class="detail_type">(function)</span>
+      <a href="#when_done/1" class="detail_link" title="Link to this function">#</a>
+      <a class="to_top_link" href="#content" title="To the top of the page">&uarr;</a>
+    </div>
+  </div>
+  
+    <p>Specs:</p>
+    <ul class="spec">
+      
+        <li>when_done(non_neg_integer) :: :ok | no_return</li>
+      
+    </ul>
+  
+  <section class="docstring">
+    <p>Ensures that ivy terminates as expected even when plugins unexpectedly terminate processing.</p>
+
+  </section>
+  
+    <a href="https://github.com/m2w/ivy/blob/master/lib/ivy.ex#L281" class="view_source">Source</a>
+  
+</section>
+
+        </section>
+      
+
+      
+
+      
+    </section>
+  </body>
+</html>

@@ -1,4 +1,8 @@
 defmodule Ivy.Types do
+  @moduledoc """
+Contains abstract type definitions.
+"""
+
   @type markdown :: String.t
   @type html :: String.t
   @type meta :: Keyword.t
@@ -92,7 +96,7 @@ end
 
 defmodule Ivy.Core do
   @moduledoc """
-TODO
+`Ivy.Core` contains the majority of ivy's logic and its `main/1`.
 """
 
   @version Keyword.get(Mix.Project.config(), :version)
@@ -674,18 +678,28 @@ and then visit [localhost:4000](http://localhost:4000).
 end
 
 defmodule TemplateStore do
+  @moduledoc """
+The `TemplateStore` is a cache for compiled EEx templates.
+
+It contains the functionality necessary to expand the default templates with
+@include and simple inheritance.
+"""
+
   @content_regex ~r/<%=\s+@content\s+%>/
 
+  @doc "Starts and links to the `TemplateStore`."
   @spec start_link() :: Agent.on_start
   def start_link() do
     Agent.start_link(fn -> HashDict.new() end, name: __MODULE__)
   end
 
+  @doc "Puts a template into the the store."
   @spec put(String.t, Template.t) :: :ok
   def put(k, v) do
     Agent.update(__MODULE__, &Dict.put(&1, k, v))
   end
 
+  @doc "Returns the template matching the key."
   @spec get(String.t) :: Template.t | nil
   def get(k) do
     Agent.get(__MODULE__, &Dict.get(&1, k))

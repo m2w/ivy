@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>TemplateStore</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="css/style.css" type="text/css" media="screen" charset="utf-8" />
+    <link rel="stylesheet" href="css/elixir.css" type="text/css" media="screen" charset="utf-8" />
+    <script type="text/javascript" charset="utf-8">
+      relpath = '';
+      if (relpath != '') relpath += '/';
+    </script>
+
+    <script type="text/javascript" charset="utf-8" src="js/jquery.js"></script>
+    <script type="text/javascript" charset="utf-8" src="js/app.js"></script>
+    <script type="text/javascript" charset="utf-8" src="js/highlight.pack.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+  </head>
+
+  <body>
+    <script type="text/javascript" charset="utf-8">
+      if (window.top.frames.main) document.body.className = 'frames';
+    </script>
+
+    <section id="content">
+      <div class="breadcrumbs">ivy v0.0.1 &rarr; <a href="overview.html">Overview</a> &rarr; <a href="TemplateStore.html">TemplateStore</a></div>
+      <h1>
+        TemplateStore
+        
+      </h1>
+
+      <ul class="summary_links">
+        
+          <li><a href="#summary">Summary</a></li>
+        
+        
+        
+          <li><a href="#functions_details">Functions</a></li>
+        
+        
+        
+      </ul>
+
+      
+        <section id="moduledoc" class="docstring">
+          <p>The <a href="TemplateStore.html"><code class="inline">TemplateStore</code></a> is a cache for compiled EEx templates.</p>
+<p>It contains the functionality necessary to expand the default templates with
+@include and simple inheritance.</p>
+
+        </section>
+      
+
+      
+        <a href="https://github.com/m2w/ivy/blob/master/lib/ivy.ex#L680" class="view_source">Source</a>
+      
+
+      
+        <h2 id="summary">Summary<span class="detail_header_links"><a class="to_top_link" href="#content" title="To the top of the page">&uarr;</a></span></h2>
+        <table class="summary">
+          <tr>
+  <td class="summary_signature"><a href="#compile_templates!/0">compile_templates!()</a></td>
+  
+    <td class="summary_synopsis"><p>Compiles all existing template strings for efficiency</p>
+</td>
+  
+</tr>
+<tr>
+  <td class="summary_signature"><a href="#get/1">get(k)</a></td>
+  
+    <td class="summary_synopsis"><p>Returns the template matching the key</p>
+</td>
+  
+</tr>
+<tr>
+  <td class="summary_signature"><a href="#handle_template_hierarchy!/0">handle_template_hierarchy!()</a></td>
+  
+    <td class="summary_synopsis"><p>Recursively updates all template by traveling along their template hierarchie</p>
+</td>
+  
+</tr>
+<tr>
+  <td class="summary_signature"><a href="#prep_template/1">prep_template(t)</a></td>
+  
+    <td class="summary_synopsis"><p>Parses a template and add it to the <a href="TemplateStore.html"><code class="inline">TemplateStore</code></a></p>
+</td>
+  
+</tr>
+<tr>
+  <td class="summary_signature"><a href="#put/2">put(k, v)</a></td>
+  
+    <td class="summary_synopsis"><p>Puts a template into the the store</p>
+</td>
+  
+</tr>
+<tr>
+  <td class="summary_signature"><a href="#start_link/0">start_link()</a></td>
+  
+    <td class="summary_synopsis"><p>Starts and links to the <a href="TemplateStore.html"><code class="inline">TemplateStore</code></a></p>
+</td>
+  
+</tr>
+
+        </table>
+      
+
+      
+
+      
+        <section id="functions_details" class="details_list">
+          <h2>Functions</h2>
+          <section class="detail">
+  <div class="detail_header" id="compile_templates!/0">
+    <span class="signature"><strong>compile_templates!()</strong></span>
+    <div class="detail_header_links">
+      <span class="detail_type">(function)</span>
+      <a href="#compile_templates!/0" class="detail_link" title="Link to this function">#</a>
+      <a class="to_top_link" href="#content" title="To the top of the page">&uarr;</a>
+    </div>
+  </div>
+  
+    <p>Specs:</p>
+    <ul class="spec">
+      
+        <li>compile_templates! :: :ok</li>
+      
+    </ul>
+  
+  <section class="docstring">
+    <p>Compiles all existing template strings for efficiency.</p>
+<p>CARE: not idempotent!</p>
+
+  </section>
+  
+    <a href="https://github.com/m2w/ivy/blob/master/lib/ivy.ex#L725" class="view_source">Source</a>
+  
+</section>
+<section class="detail">
+  <div class="detail_header" id="get/1">
+    <span class="signature"><strong>get(k)</strong></span>
+    <div class="detail_header_links">
+      <span class="detail_type">(function)</span>
+      <a href="#get/1" class="detail_link" title="Link to this function">#</a>
+      <a class="to_top_link" href="#content" title="To the top of the page">&uarr;</a>
+    </div>
+  </div>
+  
+    <p>Specs:</p>
+    <ul class="spec">
+      
+        <li>get(<a href="http://elixir-lang.org/docs/stable/elixir/String.html#t:t/0">String.t</a>) :: <a href="Template.html#t:t/0">Template.t</a> | nil</li>
+      
+    </ul>
+  
+  <section class="docstring">
+    <p>Returns the template matching the key.</p>
+
+  </section>
+  
+    <a href="https://github.com/m2w/ivy/blob/master/lib/ivy.ex#L704" class="view_source">Source</a>
+  
+</section>
+<section class="detail">
+  <div class="detail_header" id="handle_template_hierarchy!/0">
+    <span class="signature"><strong>handle_template_hierarchy!()</strong></span>
+    <div class="detail_header_links">
+      <span class="detail_type">(function)</span>
+      <a href="#handle_template_hierarchy!/0" class="detail_link" title="Link to this function">#</a>
+      <a class="to_top_link" href="#content" title="To the top of the page">&uarr;</a>
+    </div>
+  </div>
+  
+    <p>Specs:</p>
+    <ul class="spec">
+      
+        <li>handle_template_hierarchy! :: :ok</li>
+      
+    </ul>
+  
+  <section class="docstring">
+    <p>Recursively updates all template by traveling along their template hierarchie.</p>
+<p>Run <em>after</em> you have <code class="inline">prep_template</code>ed all templates.</p>
+
+  </section>
+  
+    <a href="https://github.com/m2w/ivy/blob/master/lib/ivy.ex#L714" class="view_source">Source</a>
+  
+</section>
+<section class="detail">
+  <div class="detail_header" id="prep_template/1">
+    <span class="signature"><strong>prep_template(t)</strong></span>
+    <div class="detail_header_links">
+      <span class="detail_type">(function)</span>
+      <a href="#prep_template/1" class="detail_link" title="Link to this function">#</a>
+      <a class="to_top_link" href="#content" title="To the top of the page">&uarr;</a>
+    </div>
+  </div>
+  
+    <p>Specs:</p>
+    <ul class="spec">
+      
+        <li>prep_template(<a href="http://elixir-lang.org/docs/stable/elixir/Path.html#t:t/0">Path.t</a>) :: :ok</li>
+      
+    </ul>
+  
+  <section class="docstring">
+    <p>Parses a template and add it to the <a href="TemplateStore.html"><code class="inline">TemplateStore</code></a>.</p>
+
+  </section>
+  
+    <a href="https://github.com/m2w/ivy/blob/master/lib/ivy.ex#L740" class="view_source">Source</a>
+  
+</section>
+<section class="detail">
+  <div class="detail_header" id="put/2">
+    <span class="signature"><strong>put(k, v)</strong></span>
+    <div class="detail_header_links">
+      <span class="detail_type">(function)</span>
+      <a href="#put/2" class="detail_link" title="Link to this function">#</a>
+      <a class="to_top_link" href="#content" title="To the top of the page">&uarr;</a>
+    </div>
+  </div>
+  
+    <p>Specs:</p>
+    <ul class="spec">
+      
+        <li>put(<a href="http://elixir-lang.org/docs/stable/elixir/String.html#t:t/0">String.t</a>, <a href="Template.html#t:t/0">Template.t</a>) :: :ok</li>
+      
+    </ul>
+  
+  <section class="docstring">
+    <p>Puts a template into the the store.</p>
+
+  </section>
+  
+    <a href="https://github.com/m2w/ivy/blob/master/lib/ivy.ex#L698" class="view_source">Source</a>
+  
+</section>
+<section class="detail">
+  <div class="detail_header" id="start_link/0">
+    <span class="signature"><strong>start_link()</strong></span>
+    <div class="detail_header_links">
+      <span class="detail_type">(function)</span>
+      <a href="#start_link/0" class="detail_link" title="Link to this function">#</a>
+      <a class="to_top_link" href="#content" title="To the top of the page">&uarr;</a>
+    </div>
+  </div>
+  
+    <p>Specs:</p>
+    <ul class="spec">
+      
+        <li>start_link :: <a href="http://elixir-lang.org/docs/stable/elixir/Agent.html#t:on_start/0">Agent.on_start</a></li>
+      
+    </ul>
+  
+  <section class="docstring">
+    <p>Starts and links to the <a href="TemplateStore.html"><code class="inline">TemplateStore</code></a>.</p>
+
+  </section>
+  
+    <a href="https://github.com/m2w/ivy/blob/master/lib/ivy.ex#L692" class="view_source">Source</a>
+  
+</section>
+
+        </section>
+      
+
+      
+
+      
+    </section>
+  </body>
+</html>
