@@ -151,8 +151,8 @@ defmodule Ivy.Core do
         run_server(port)
       else
         if watch do
-          # TODO: implement
-          IO.puts "not yet implemented"
+          GenServer.start_link(Watcher, [])
+          :timer.sleep(:infinity)
         else
           if version do
             print_version()
@@ -562,7 +562,6 @@ Local configuration overwrites existing keys from the global configuration.
   def set_config(config) do
     conf = Dict.merge(@default_config, config)
     Enum.each(conf, fn {k, v} -> set(k, v) end)
-    :ok
   end
 end
 
@@ -674,6 +673,51 @@ and then visit [localhost:4000](http://localhost:4000).
 
     IO.puts "Your ivy has been planted!"
     System.halt(0)
+  end
+end
+
+defmodule Watcher do
+  @moduledoc """
+Monitors relevant directories for changing files.
+Issues the command to recompile said files upon change.
+"""
+  use GenServer
+
+  # TODO: need watchers for each type of directory...
+  # for now ignore anything except posts
+  def init(_args) do
+    {:ok, pid} = :file_monitor.start_link()
+    monitor(ConfigAgent.get(:posts))
+    {:ok, [fm: pid, start: :erlang.localtime()]}
+  end
+
+  def handle_call(c, _from, state) do
+    IO.inspect c, pretty: true
+    {:reply, :ok, state}
+  end
+
+  def handle_cast(c, state) do
+    IO.inspect c, pretty: true
+    {:noreply, state}
+  end
+
+  # TODO: only interested in found files after starting!
+  def handle_info({:file_monitor, _ref, {:changed, path, :file, _finfo, _info}}, state) do
+    # TODO: build said file
+    IO.inspect path
+    {:noreply, state}
+  end
+  def handle_info({:file_monitor, _ref, {:found, path, :file, _finfo, _info}}, state) do
+    # TODO: build said file
+    IO.inspect path
+    {:noreply, state}
+  end
+  def handle_info(_msg, state) do
+    {:noreply, state}
+  end
+
+  defp monitor(path) do
+    :file_monitor.automonitor(path)
   end
 end
 
