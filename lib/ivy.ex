@@ -342,6 +342,34 @@ Options:
     end
   end
 
+  @doc "Renders a page or post to disk."
+  @spec render(Path.t, :post | :page) :: :ok
+  def render(f, :post) do
+    {html, meta} = parse_md(f)
+    datep = String.split(Path.basename(f), "-", parts: 4)
+
+    date = datep
+    |> Enum.take(3)
+    |> Enum.map(&String.to_integer/1)
+    |> List.to_tuple
+
+    stat = File.stat!(f)
+    {_, time} = stat.mtime
+
+    meta = Keyword.merge(meta, [date: {date, time}])
+
+    {fname, _} = write_html(f, {html, meta})
+
+    SiteStore.set(%Post{uri: fname, contents: html, meta: meta})
+  end
+  def render(f, :page) do
+    {html, meta} = parse_md(f)
+
+    {fname, raw} = write_html(f, {html, meta})
+
+    SiteStore.set(%Page{uri: "page/" <> fname, html: raw, meta: meta})
+  end
+
   # TODO: need to make next, cur and prev available as URLs not ints
   @spec write_paginated_index(Template.t, [Paginator.t],
                               Ivy.Types.meta, [Page.t]) :: :ok
@@ -427,33 +455,6 @@ Options:
     File.write!(out_path, html)
 
     {fname, html}
-  end
-
-  @spec render(Path.t, :post | :page) :: :ok
-  defp render(f, :post) do
-    {html, meta} = parse_md(f)
-    datep = String.split(Path.basename(f), "-", parts: 4)
-
-    date = datep
-    |> Enum.take(3)
-    |> Enum.map(&String.to_integer/1)
-    |> List.to_tuple
-
-    stat = File.stat!(f)
-    {_, time} = stat.mtime
-
-    meta = Keyword.merge(meta, [date: {date, time}])
-
-    {fname, _} = write_html(f, {html, meta})
-
-    SiteStore.set(%Post{uri: fname, contents: html, meta: meta})
-  end
-  defp render(f, :page) do
-    {html, meta} = parse_md(f)
-
-    {fname, raw} = write_html(f, {html, meta})
-
-    SiteStore.set(%Page{uri: "page/" <> fname, html: raw, meta: meta})
   end
 end
 
@@ -687,8 +688,12 @@ Issues the command to recompile said files upon change.
   # for now ignore anything except posts
   def init(_args) do
     {:ok, pid} = :file_monitor.start_link()
-    monitor(ConfigAgent.get(:posts))
-    {:ok, [fm: pid, start: :erlang.localtime()]}
+    {:ok, postMonRef, _path} = monitor(ConfigAgent.get(:posts))
+    {:ok, pageMonRef, _path} = monitor(ConfigAgent.get(:pages))
+    {:ok, templateMonRef, _path} = monitor(ConfigAgent.get(:templates))
+    {:ok, staticMonRef, _path} = monitor(ConfigAgent.get(:static))
+    {:ok, %{fm: pid, posts: postMonRef,
+            pages: pageMonRef, templates: templateMonRef, static: staticMonRef}}
   end
 
   def handle_call(c, _from, state) do
@@ -701,14 +706,32 @@ Issues the command to recompile said files upon change.
     {:noreply, state}
   end
 
-  # TODO: only interested in found files after starting!
-  def handle_info({:file_monitor, _ref, {:changed, path, :file, _finfo, _info}}, state) do
-    # TODO: build said file
-    IO.inspect path
+  def handle_info({:file_monitor, monRef, {:changed, path, :file, _finfo, _info}},
+                  %{posts: postMonRef, pages: pageMonRef,
+                    templates: templateMonRef, static: staticMonRef} = state) do
+    case monRef do
+      ^postMonRef ->
+        if String.match?(path, ~r/\d{4}-\d{1,2}-\d{1,2}-.+/) do
+          Ivy.Core.render(path, :post)
+        end
+      ^pageMonRef ->
+        if Path.extname(path) == ".md" do
+          Ivy.Core.render(path, :page)
+        else
+          Ivy.Core.copy_raw([path])
+        end
+      ^templateMonRef ->
+        # recompile ALL templates due to inheritance...
+        # TODO: implement
+        :ok
+      ^staticMonRef ->
+        Ivy.Core.copy_raw([path])
+    end
     {:noreply, state}
   end
   def handle_info({:file_monitor, _ref, {:found, path, :file, _finfo, _info}}, state) do
     # TODO: build said file
+    # TODO: this will be called when starting. need to basically build everything initially
     IO.inspect path
     {:noreply, state}
   end
