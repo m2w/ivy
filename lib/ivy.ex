@@ -573,20 +573,26 @@ defmodule LocalServer do
 It is soley intended for development.
 """
 
-  use Plug.Builder
-
-  # FIXME: how can I make `from` dynamic???
-  plug Plug.Static, at: "/", from: "./_out"
-  plug :not_found
+  use Plug.ErrorHandler
 
   def init(options) do
     options
   end
 
+  def call(conn, _opts) do
+    opts = Plug.Static.init([gzip: true, at: "/", from: ConfigAgent.get(:out)])
+    nc = Plug.Static.call(conn, opts)
+    if ! nc.halted do
+      handle_not_found(conn, opts)
+    else
+      nc
+    end
+  end
+
   @doc """
 Handles any 404s encountered by the local server, either returning a dedicated 404 page (if available) or a simple 404 "not found"
 """
-  def not_found(conn, _) do
+  def handle_not_found(conn, _opts) do
     not_found = SiteStore.get("page/404")
     if not_found do
       Plug.Conn.send_resp(conn, 404, not_found.html)
@@ -729,10 +735,28 @@ Issues the command to recompile said files upon change.
     end
     {:noreply, state}
   end
-  def handle_info({:file_monitor, _ref, {:found, path, :file, _finfo, _info}}, state) do
-    # TODO: build said file
+  def handle_info({:file_monitor, monRef, {:found, path, :file, _finfo, _info}},
+                  %{posts: postMonRef, pages: pageMonRef,
+                    templates: templateMonRef, static: staticMonRef} = state) do
     # TODO: this will be called when starting. need to basically build everything initially
-    IO.inspect path
+    case monRef do
+      ^postMonRef ->
+        if String.match?(path, ~r/\d{4}-\d{1,2}-\d{1,2}-.+/) do
+          Ivy.Core.render(path, :post)
+        end
+      ^pageMonRef ->
+        if Path.extname(path) == ".md" do
+          Ivy.Core.render(path, :page)
+        else
+          Ivy.Core.copy_raw([path])
+        end
+      ^templateMonRef ->
+        # recompile ALL templates due to inheritance...
+        # TODO: implement
+        :ok
+      ^staticMonRef ->
+        Ivy.Core.copy_raw([path])
+    end
     {:noreply, state}
   end
   def handle_info(_msg, state) do
