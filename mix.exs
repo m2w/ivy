@@ -21,12 +21,12 @@ defmodule Ivy.Main.Mixfile do
   end
 
   defp deps do
-    [{:earmark, "~> 0.1.12"},
+    [{:earmark, "~> 0.1.13"},
      {:cowboy, "~> 1.0.0"},
-     {:plug, "~> 0.9.0"},
-     {:cowlib, "1.0.0"},
+     {:plug, "~> 0.11.1"},
+     {:cowlib, "1.0.1"},
      {:ranch, "~> 1.0.0"},
      {:file_monitor, github: "richcarl/file_monitor", ref: "master"},
-     {:ex_doc, "~> 0.6", only: :dev}]
+     {:ex_doc, "~> 0.7.1", only: :dev}]
   end
 end
