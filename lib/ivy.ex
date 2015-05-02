@@ -36,43 +36,38 @@ defmodule Ivy.Core do
                                                   aliases: [p: :port, v: :version,
                                                             w: :watch, s: :serve,
                                                             n: :new])
-
-      # TODO: refactor?
-      serve = Keyword.get(parsed, :serve, false)
-      port = Keyword.get(parsed, :port, 4000)
-      watch = Keyword.get(parsed, :watch, false)
-      version = Keyword.get(parsed, :version, false)
-
-      if Keyword.has_key?(parsed, :new) do
-        new = String.strip(Keyword.get(parsed, :new, ""))
-        if String.length(new) > 0 do
-          Ivy.Skel.create(new)
-        else
-          IO.puts "Please provide a path for the ivy skeleton."
-          System.halt(126)
-        end
-      end
-
-      setup()
-
-      if serve do
-        run_server(port)
-      else
-        if watch do
-          GenServer.start_link(Ivy.FileWatcher, [])
-          :timer.sleep(:infinity)
-        else
-          if version do
-            print_version()
-          else
-            show_help()
-          end
-        end
-      end
+      do_action(parsed)
     else
       setup()
       build()
     end
+  end
+
+  def do_action([{:new, path} | _]) do
+    new = String.strip(path)
+    if String.length(new) > 0 do
+      Ivy.Skel.create(new)
+    else
+      IO.puts "Please provide a path for the ivy skeleton."
+      System.halt(126)
+    end
+  end
+  def do_action([{:version, true} | _]) do
+    print_version()
+  end
+  def do_action([{:watch, true} | _]) do
+    # TODO: add support for simultaneous 'serve'
+    setup()
+    build()
+    GenServer.start_link(Ivy.FileWatcher, [])
+    :timer.sleep(:infinity)
+  end
+  def do_action([{:serve, true} | rem]) do
+    port = Keyword.get(rem, :port, 4000)
+    run_server(port)
+  end
+  def do_action(_) do
+    show_help()
   end
 
   @doc "Starts all Stores and configures ivy."
@@ -111,6 +106,7 @@ Options:
     Watch for changes and automatically rebuild your site
 
 """
+    System.halt(0)
   end
 
   @doc "Print the name and version number."
@@ -164,6 +160,11 @@ Options:
 
     # templating
     templates = Mix.Utils.extract_files([Ivy.ConfigAgent.get(:templates)], "*.html")
+    # TODO: duplicated with the index specific stuff, refactor
+    if File.exists? "index.html" do
+      idx = Path.join(File.cwd!, "index.html")
+      templates = [idx|templates]
+    end
     Enum.each(templates, &Ivy.TemplateStore.prep_template/1)
     Ivy.TemplateStore.handle_template_hierarchy!()
     Ivy.TemplateStore.compile_templates!()
@@ -236,13 +237,12 @@ Options:
       meta = Ivy.ConfigAgent.local_conf(meta)
       t = Ivy.TemplateStore.get(Keyword.get(meta, :layout, "base"))
 
-      if ConfigAgent.get(:paginate, false) do
+      if Ivy.ConfigAgent.get(:paginate, false) do
         fname = "index.html"
         fpath = Path.join(Ivy.ConfigAgent.get(:out), fname)
         write_index(fpath, t, Keyword.merge(meta, [posts: posts, pages: pages]))
       else
-        per_page = Ivy.ConfigAgent.get(:paginate_by, 5)
-        paginators = paginate_posts([%Paginator{prev: nil, cur: 0, next: 1, per_page: per_page}], posts)
+        paginators = paginate_posts(posts)
         write_paginated_index(t, paginators, meta, pages)
       end
     else
@@ -254,6 +254,7 @@ Options:
   @spec render(Path.t, :post | :page) :: :ok
   def render(f, :post) do
     {html, meta} = parse_md(f)
+
     datep = String.split(Path.basename(f), "-", parts: 4)
 
     date = datep
@@ -272,7 +273,6 @@ Options:
   end
   def render(f, :page) do
     {html, meta} = parse_md(f)
-
     {fname, raw} = write_html(f, {html, meta})
 
     Ivy.SiteStore.set(%Page{uri: "page/" <> fname, html: raw, meta: meta})
@@ -302,21 +302,31 @@ Options:
 
   @spec write_index(Path.t, Template.t, Keyword.t) :: :ok
   defp write_index(fpath, template, assigns) do
+    # FIXME: this will never work, since we never set content!
     {out, _ctx} = Code.eval_quoted(template.tpl,
                                    [assigns: assigns])
     File.write!(fpath, out)
   end
 
-  # TODO: fix next on the last page, should be nil
+  @spec paginate_posts([Post.t]) :: [Paginator.t]
+  defp paginate_posts(posts) do
+    per_page = Ivy.ConfigAgent.get(:paginate_by, 5)
+    {pp, rem} = Enum.split(posts, per_page)
+    paginator = %Paginator{prev: nil, cur: 0, next: 1, items: pp}
+    paginate_posts([paginator], rem)
+  end
+
   @spec paginate_posts([Paginator.t], [Post.t]) :: [Paginator.t]
   defp paginate_posts(paginators, []) do
     paginators
   end
   defp paginate_posts([%Paginator{cur: cur, next: next, per_page: per_page}|_] = paginators, posts) do
     {pp, rem} = Enum.split(posts, per_page)
-
-    npaginator = %Paginator{prev: cur, cur: next, next: next + 1, items: pp}
-
+    n = next + 1
+    if length(rem) == 0 do
+      n = nil
+    end
+    npaginator = %Paginator{prev: cur, cur: next, next: n, items: pp}
     paginate_posts([npaginator|paginators], rem)
   end
 
@@ -349,12 +359,17 @@ Options:
     {html, meta}
   end
 
+  def datestr({{year, month, day}, {h, m, _}}) do
+    :io_lib.format("~2B.~2..0B.~4B ~2B:~2..0B", [day, month, year, h, m])
+  end
+
   @spec write_html(Path.t,
                    {Ivy.Types.html, Ivy.Types.meta}) :: {Path.t, Ivy.Types.html}
   defp write_html(f, {html, meta}) do
     t = Ivy.TemplateStore.get(Keyword.get(meta, :layout, "base"))
     data = Keyword.merge(meta, [content: html])
 
+    # FIXME: alias the local functions or module so that typing the fully qualified name can be avoided inside the template
     {html, _ctx} = Code.eval_quoted(t.tpl, [assigns: data], __ENV__)
 
     fname = Path.basename(f, ".md") <> ".html"

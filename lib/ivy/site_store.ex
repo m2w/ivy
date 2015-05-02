@@ -37,11 +37,12 @@ in memory. This cache takes the form of a `HashDict.t`.
   @doc "Returns a list of all posts."
   @spec get_all_posts() :: [Post.t]
   def get_all_posts() do
-    Enum.filter(get_all_content(), fn c -> c.__struct__ == Post end)
+    Enum.filter(get_all_content(), fn c ->
+      c.__struct__ == Post end)
   end
 
   @spec get_all_content() :: HashDict.t
   defp get_all_content() do
-    Agent.get(__MODULE__, fn state -> state end)
+    Agent.get(__MODULE__, fn state -> Dict.values(state) end)
   end
 end
