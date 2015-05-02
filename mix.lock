@@ -1,7 +1,9 @@
 %{"cowboy": {:hex, :cowboy, "1.0.0"},
   "cowlib": {:hex, :cowlib, "1.0.1"},
-  "earmark": {:hex, :earmark, "0.1.13"},
-  "ex_doc": {:hex, :ex_doc, "0.7.1"},
+  "earmark": {:hex, :earmark, "0.1.15"},
+  "ex_doc": {:hex, :ex_doc, "0.7.2"},
+  "exprintf": {:hex, :exprintf, "0.1.6"},
+  "exprof": {:hex, :exprof, "0.2.0"},
   "file_monitor": {:git, "git://github.com/richcarl/file_monitor.git", "4910b991bf3166377985d7ed961665c4b24e3de6", [ref: "master"]},
-  "plug": {:hex, :plug, "0.11.1"},
+  "plug": {:hex, :plug, "0.12.1"},
   "ranch": {:hex, :ranch, "1.0.0"}}
